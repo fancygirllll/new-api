@@ -1,26 +1,26 @@
-# External Integrations
+# 外部集成
 
-**Analysis Date:** 2026-07-01
+**分析日期：** 2026-07-01
 
-new-api is an LLM API gateway/proxy. Its primary integrations are upstream AI model providers (relayed via per-provider adaptors) plus payment, auth, email, monitoring, and analytics services.
+new-api 是一个 LLM API 网关/代理。其主要集成为上游 AI 模型提供商（通过按提供商划分的适配器中继），以及支付、认证、邮件、监控与分析服务。
 
-## APIs & External Services
+## API 与外部服务
 
-### LLM / AI Model Providers (relay adaptors)
+### LLM / AI 模型提供商（中继适配器）
 
-Every upstream provider implements the `channel.Adaptor` interface (`relay/channel/adapter.go` line 15) or `channel.TaskAdaptor` (line 34) for async video/image/audio tasks. Adaptors are resolved by `apiType` in `relay/relay_adaptor.go` `GetAdaptor()` (line 54). Channel type IDs and default base URLs are defined in `constant/channel.go`. Credentials are stored per-channel in the `channels` DB table (admin-configured), not in env vars.
+每个上游提供商实现 `channel.Adaptor` 接口（`relay/channel/adapter.go` 第 15 行）或用于异步视频/图像/音频任务的 `channel.TaskAdaptor`（第 34 行）。适配器由 `relay/relay_adaptor.go` `GetAdaptor()`（第 54 行）按 `apiType` 解析。渠道类型 ID 与默认 base URL 在 `constant/channel.go` 中定义。凭证按渠道存储于 `channels` 数据库表（管理员配置），不存于环境变量。
 
-**Chat / Completion / Embedding / Image / Rerank / Audio Providers:**
+**对话 / 补全 / 嵌入 / 图像 / 重排 / 音频提供商：**
 
-| Provider | Channel Type | Adaptor | Default Base URL |
+| 提供商 | 渠道类型 | 适配器 | 默认 Base URL |
 |----------|-------------|---------|------------------|
 | OpenAI | `ChannelTypeOpenAI` (1) | `relay/channel/openai/adaptor.go` | `https://api.openai.com` |
-| Azure OpenAI | `ChannelTypeAzure` (3) | `relay/channel/openai/adaptor.go` (Azure mode) | (per-deployment) |
+| Azure OpenAI | `ChannelTypeAzure` (3) | `relay/channel/openai/adaptor.go`（Azure 模式） | （按部署） |
 | Anthropic Claude | `ChannelTypeAnthropic` (14) | `relay/channel/claude/adaptor.go` | `https://api.anthropic.com` |
 | Google Gemini | `ChannelTypeGemini` (24) | `relay/channel/gemini/adaptor.go` | `https://generativelanguage.googleapis.com` |
 | Google PaLM | `ChannelTypePaLM` (11) | `relay/channel/palm/adaptor.go` | — |
-| Google Vertex AI | `ChannelTypeVertexAi` (41) | `relay/channel/vertex/adaptor.go` (service-account JWT auth, `relay/channel/vertex/service_account.go`) | — |
-| AWS Bedrock | `ChannelTypeAws` (33) | `relay/channel/aws/adaptor.go` (AWS SDK v2 `bedrockruntime`; API-key or AK/SK modes) | — |
+| Google Vertex AI | `ChannelTypeVertexAi` (41) | `relay/channel/vertex/adaptor.go`（服务账号 JWT 认证，`relay/channel/vertex/service_account.go`） | — |
+| AWS Bedrock | `ChannelTypeAws` (33) | `relay/channel/aws/adaptor.go`（AWS SDK v2 `bedrockruntime`；API-key 或 AK/SK 模式） | — |
 | Cohere | `ChannelTypeCohere` (34) | `relay/channel/cohere/adaptor.go` | `https://api.cohere.ai` |
 | Mistral | `ChannelTypeMistral` (42) | `relay/channel/mistral/adaptor.go` | `https://api.mistral.ai` |
 | DeepSeek | `ChannelTypeDeepSeek` (43) | `relay/channel/deepseek/adaptor.go` | `https://api.deepseek.com` |
@@ -36,189 +36,189 @@ Every upstream provider implements the `channel.Adaptor` interface (`relay/chann
 | Dify | `ChannelTypeDify` (37) | `relay/channel/dify/adaptor.go` | `https://api.dify.ai` |
 | Jina | `ChannelTypeJina` (38) | `relay/channel/jina/adaptor.go` | `https://api.jina.ai` |
 | Coze | `ChannelTypeCoze` (49) | `relay/channel/coze/adaptor.go` | `https://api.coze.cn` |
-| Tencent Hunyuan | `ChannelTypeTencent` (23) | `relay/channel/tencent/adaptor.go` | `https://hunyuan.tencentcloudapi.com` |
-| Baidu (ERNIE) | `ChannelTypeBaidu` (15) / `BaiduV2` (46) | `relay/channel/baidu/adaptor.go`, `baidu_v2/adaptor.go` | `https://aip.baidubce.com` / `https://qianfan.baidubce.com` |
-| Ali (Qwen / DashScope) | `ChannelTypeAli` (17) | `relay/channel/ali/adaptor.go` | `https://dashscope.aliyuncs.com` |
-| Xunfei (Spark) | `ChannelTypeXunfei` (18) | `relay/channel/xunfei/adaptor.go` | — |
-| Zhipu (GLM) | `ChannelTypeZhipu` (16) / `ZhipuV4` (26) | `relay/channel/zhipu/adaptor.go`, `zhipu_4v/adaptor.go` | `https://open.bigmodel.cn` |
-| VolcEngine (Doubao) | `ChannelTypeVolcEngine` (45) | `relay/channel/volcengine/adaptor.go` | `https://ark.cn-beijing.volces.com` |
+| 腾讯混元 | `ChannelTypeTencent` (23) | `relay/channel/tencent/adaptor.go` | `https://hunyuan.tencentcloudapi.com` |
+| 百度（文心一言） | `ChannelTypeBaidu` (15) / `BaiduV2` (46) | `relay/channel/baidu/adaptor.go`、`baidu_v2/adaptor.go` | `https://aip.baidubce.com` / `https://qianfan.baidubce.com` |
+| 阿里（通义千问 / DashScope） | `ChannelTypeAli` (17) | `relay/channel/ali/adaptor.go` | `https://dashscope.aliyuncs.com` |
+| 讯飞（星火） | `ChannelTypeXunfei` (18) | `relay/channel/xunfei/adaptor.go` | — |
+| 智谱（GLM） | `ChannelTypeZhipu` (16) / `ZhipuV4` (26) | `relay/channel/zhipu/adaptor.go`、`zhipu_4v/adaptor.go` | `https://open.bigmodel.cn` |
+| 火山引擎（豆包） | `ChannelTypeVolcEngine` (45) | `relay/channel/volcengine/adaptor.go` | `https://ark.cn-beijing.volces.com` |
 | Xinference | `ChannelTypeXinference` (47) | `relay/channel/openai/adaptor.go` | — |
 | LingYiWanWu | `ChannelTypeLingYiWanWu` (31) | `relay/channel/openai/adaptor.go` | `https://api.lingyiwanwu.com` |
 | MokaAI | `ChannelTypeMokaAI` (44) | `relay/channel/mokaai/adaptor.go` | `https://api.moka.ai` |
 | Submodel | `ChannelTypeSubmodel` (53) | `relay/channel/submodel/adaptor.go` | `https://llm.submodel.ai` |
-| ChatGPT Subscription (Codex) | `ChannelTypeCodex` (57) | `relay/channel/codex/adaptor.go` (OAuth refresh-token flow; `service/codex_oauth.go`) | `https://chatgpt.com` |
-| Advanced Custom | `ChannelTypeAdvancedCustom` (58) | `relay/channel/advancedcustom/adaptor.go` | (operator-defined) |
+| ChatGPT 订阅（Codex） | `ChannelTypeCodex` (57) | `relay/channel/codex/adaptor.go`（OAuth refresh-token 流程；`service/codex_oauth.go`） | `https://chatgpt.com` |
+| 高级自定义 | `ChannelTypeAdvancedCustom` (58) | `relay/channel/advancedcustom/adaptor.go` | （运营者自定义） |
 
-Relay entry routes: `router/relay-router.go` — `/v1/chat/completions`, `/v1/messages` (Claude), `/v1/responses`, `/v1/embeddings`, `/v1/audio/*`, `/v1/images/*`, `/v1/rerank`, `/v1beta/models/*` (Gemini), `/v1/realtime` (WebSocket).
+中继入口路由：`router/relay-router.go` —— `/v1/chat/completions`、`/v1/messages`（Claude）、`/v1/responses`、`/v1/embeddings`、`/v1/audio/*`、`/v1/images/*`、`/v1/rerank`、`/v1beta/models/*`（Gemini）、`/v1/realtime`（WebSocket）。
 
-**Async Task Providers (video / image / music) — `channel.TaskAdaptor`:**
+**异步任务提供商（视频 / 图像 / 音乐）—— `channel.TaskAdaptor`：**
 
-| Provider | Platform | Adaptor |
+| 提供商 | 平台 | 适配器 |
 |----------|----------|---------|
-| Midjourney | `:mode/mj/*` routes (`router/relay-router.go` `registerMjRouterGroup`) | `relay/mjproxy_handler.go` |
-| Suno (music) | `/suno/submit/*` | `relay/channel/task/suno/adaptor.go` |
-| Kling (video) | `/kling/v1/videos/*` (`router/video-router.go`) | `relay/channel/task/kling/adaptor.go` |
-| Jimeng (image/video) | `/jimeng` | `relay/channel/task/jimeng/adaptor.go` |
-| Vertex AI (video) | `/v1/video/generations` | `relay/channel/task/vertex/adaptor.go` |
-| Vidu (video) | `/v1/video/generations` | `relay/channel/task/vidu/adaptor.go` |
-| Doubao Video / VolcEngine | `/v1/video/generations` | `relay/channel/task/doubao/adaptor.go` |
-| Sora (OpenAI video) | `/v1/videos` | `relay/channel/task/sora/adaptor.go` |
-| Gemini (image gen) | task adaptor | `relay/channel/task/gemini/adaptor.go` |
-| Hailuo (MiniMax video) | task adaptor | `relay/channel/task/hailuo/adaptor.go` |
-| Ali (Wanx image) | task adaptor | `relay/channel/task/ali/adaptor.go` |
+| Midjourney | `:mode/mj/*` 路由（`router/relay-router.go` `registerMjRouterGroup`） | `relay/mjproxy_handler.go` |
+| Suno（音乐） | `/suno/submit/*` | `relay/channel/task/suno/adaptor.go` |
+| Kling（视频） | `/kling/v1/videos/*`（`router/video-router.go`） | `relay/channel/task/kling/adaptor.go` |
+| Jimeng（图像/视频） | `/jimeng` | `relay/channel/task/jimeng/adaptor.go` |
+| Vertex AI（视频） | `/v1/video/generations` | `relay/channel/task/vertex/adaptor.go` |
+| Vidu（视频） | `/v1/video/generations` | `relay/channel/task/vidu/adaptor.go` |
+| 豆包视频 / 火山引擎 | `/v1/video/generations` | `relay/channel/task/doubao/adaptor.go` |
+| Sora（OpenAI 视频） | `/v1/videos` | `relay/channel/task/sora/adaptor.go` |
+| Gemini（图像生成） | task 适配器 | `relay/channel/task/gemini/adaptor.go` |
+| 海螺（MiniMax 视频） | task 适配器 | `relay/channel/task/hailuo/adaptor.go` |
+| 阿里（万象图像） | task 适配器 | `relay/channel/task/ali/adaptor.go` |
 
-Auth: per-channel API key / OAuth token stored in DB `channels` table; passed via `SetupRequestHeader` per adaptor. Codex adaptor auto-refreshes OpenAI OAuth tokens (`service/codex_credential_refresh_task.go`, started in `main.go` line 119).
+认证：按渠道的 API key / OAuth token 存于 DB `channels` 表；通过各适配器的 `SetupRequestHeader` 传递。Codex 适配器自动刷新 OpenAI OAuth token（`service/codex_credential_refresh_task.go`，在 `main.go` 第 119 行启动）。
 
-### Payment Providers
+### 支付提供商
 
-| Provider | SDK / Client | Init | Webhook Route | Controller |
+| 提供商 | SDK / 客户端 | 初始化 | Webhook 路由 | Controller |
 |----------|--------------|------|---------------|------------|
-| Stripe | `github.com/stripe/stripe-go/v81` + `webhook` | `setting/payment_stripe.go` (`StripeApiSecret`, `StripeWebhookSecret`, `StripePriceId`) | `POST /api/stripe/webhook` (`router/api-router.go` line 57) | `controller/topup_stripe.go`, `controller/subscription_payment_stripe.go` |
-| EPay | `github.com/Calcium-Ion/go-epay v0.0.4` | admin-configured merchant key | `GET/POST /api/user/epay/notify`, `/api/subscription/epay/notify` (lines 76-77, 180-181) | `controller/topup.go` (`RequestEpay`), `controller/subscription_payment_epay.go` |
-| Creem | custom HTTP + HMAC-SHA256 (`controller/topup_creem.go` `verifyCreemSignature`) | `setting/payment_creem.go` (`CreemApiKey`, `CreemWebhookSecret`, `CreemTestMode`) | `POST /api/creem/webhook` (line 58) | `controller/topup_creem.go`, `controller/subscription_payment_creem.go` |
-| Waffo (Global) | `github.com/waffo-com/waffo-go v1.3.2` | `setting/payment_waffo.go` | `POST /api/waffo/webhook` (line 59) | `controller/topup_waffo.go` |
-| Waffo Pancake | `github.com/waffo-com/waffo-pancake-sdk-go v0.3.1` | `setting/payment_waffo_pancake.go` (`WaffoPancakeMerchantID`, `WaffoPancakePrivateKey`, `WaffoPancakeStoreID`, `WaffoPancakeProductID`) | `POST /api/waffo-pancake/webhook/:env` (line 62; `:env` separates test/prod) | `controller/topup_waffo_pancake.go`, `controller/subscription_payment_waffo_pancake.go`, `service/waffo_pancake.go` |
+| Stripe | `github.com/stripe/stripe-go/v81` + `webhook` | `setting/payment_stripe.go`（`StripeApiSecret`、`StripeWebhookSecret`、`StripePriceId`） | `POST /api/stripe/webhook`（`router/api-router.go` 第 57 行） | `controller/topup_stripe.go`、`controller/subscription_payment_stripe.go` |
+| EPay | `github.com/Calcium-Ion/go-epay v0.0.4` | 管理员配置的商户密钥 | `GET/POST /api/user/epay/notify`、`/api/subscription/epay/notify`（第 76-77、180-181 行） | `controller/topup.go`（`RequestEpay`）、`controller/subscription_payment_epay.go` |
+| Creem | 自定义 HTTP + HMAC-SHA256（`controller/topup_creem.go` `verifyCreemSignature`） | `setting/payment_creem.go`（`CreemApiKey`、`CreemWebhookSecret`、`CreemTestMode`） | `POST /api/creem/webhook`（第 58 行） | `controller/topup_creem.go`、`controller/subscription_payment_creem.go` |
+| Waffo（Global） | `github.com/waffo-com/waffo-go v1.3.2` | `setting/payment_waffo.go` | `POST /api/waffo/webhook`（第 59 行） | `controller/topup_waffo.go` |
+| Waffo Pancake | `github.com/waffo-com/waffo-pancake-sdk-go v0.3.1` | `setting/payment_waffo_pancake.go`（`WaffoPancakeMerchantID`、`WaffoPancakePrivateKey`、`WaffoPancakeStoreID`、`WaffoPancakeProductID`） | `POST /api/waffo-pancake/webhook/:env`（第 62 行；`:env` 区分 test/prod） | `controller/topup_waffo_pancake.go`、`controller/subscription_payment_waffo_pancake.go`、`service/waffo_pancake.go` |
 
-Pay endpoints (authenticated): `/api/user/stripe/pay`, `/api/user/pay` (epay), `/api/user/creem/pay`, `/api/user/waffo/pay`, `/api/user/waffo-pancake/pay` (`router/api-router.go` lines 99-107); subscription equivalents under `/api/subscription/*` (lines 157-161).
+支付端点（已认证）：`/api/user/stripe/pay`、`/api/user/pay`（epay）、`/api/user/creem/pay`、`/api/user/waffo/pay`、`/api/user/waffo-pancake/pay`（`router/api-router.go` 第 99-107 行）；订阅对应项位于 `/api/subscription/*`（第 157-161 行）。
 
-### OAuth / Social Login Providers
+### OAuth / 社交登录提供商
 
-All standard providers implement the `oauth.Provider` interface (`oauth/provider.go`) and self-register in `init()`. Unified route: `GET /api/oauth/:provider` → `controller.HandleOAuth` (`router/api-router.go` line 54).
+所有标准提供商实现 `oauth.Provider` 接口（`oauth/provider.go`）并在 `init()` 中自注册。统一路由：`GET /api/oauth/:provider` → `controller.HandleOAuth`（`router/api-router.go` 第 54 行）。
 
-| Provider | Slug | Implementation | Settings |
+| 提供商 | Slug | 实现 | 配置 |
 |----------|------|----------------|----------|
-| GitHub | `github` | `oauth/github.go` (token exchange `github.com/login/oauth/access_token`, user info `api.github.com/user`) | `common.GitHubClientId/Secret` |
-| Discord | `discord` | `oauth/discord.go` | `setting/system_setting/discord.go` (`GetDiscordSettings()`) |
-| OIDC (generic) | `oidc` | `oauth/oidc.go` (discovery-based) | `setting/system_setting/oidc.go` |
+| GitHub | `github` | `oauth/github.go`（token 交换 `github.com/login/oauth/access_token`，用户信息 `api.github.com/user`） | `common.GitHubClientId/Secret` |
+| Discord | `discord` | `oauth/discord.go` | `setting/system_setting/discord.go`（`GetDiscordSettings()`） |
+| OIDC（通用） | `oidc` | `oauth/oidc.go`（基于发现） | `setting/system_setting/oidc.go` |
 | LinuxDO | `linuxdo` | `oauth/linuxdo.go` | `common.LinuxDOClientId/Secret` |
-| Custom (DB-driven) | any slug | `oauth/generic.go` + `oauth/registry.go` `LoadCustomProviders()` (loaded from `custom_oauth_providers` table in `main.go` line 336) | `model/custom_oauth_provider.go` |
-| WeChat | `wechat` | `controller/wechat.go` (proxied via `WeChatServerAddress` + `WeChatServerToken`) | `common.WeChatServerAddress/Token` |
-| Telegram | `telegram` | `controller/telegram.go` (HMAC validation against `TelegramBotToken`) | `common.TelegramBotToken` |
+| 自定义（DB 驱动） | 任意 slug | `oauth/generic.go` + `oauth/registry.go` `LoadCustomProviders()`（从 `custom_oauth_providers` 表加载，`main.go` 第 336 行） | `model/custom_oauth_provider.go` |
+| 微信 | `wechat` | `controller/wechat.go`（通过 `WeChatServerAddress` + `WeChatServerToken` 代理） | `common.WeChatServerAddress/Token` |
+| Telegram | `telegram` | `controller/telegram.go`（针对 `TelegramBotToken` 的 HMAC 校验） | `common.TelegramBotToken` |
 
-Bindings: `/api/oauth/wechat/bind`, `/api/oauth/telegram/bind`, `/api/oauth/email/bind` (lines 50-52). Admin custom-provider CRUD: `/api/custom-oauth-provider/*` (lines 202-211).
+绑定：`/api/oauth/wechat/bind`、`/api/oauth/telegram/bind`、`/api/oauth/email/bind`（第 50-52 行）。管理员自定义提供商 CRUD：`/api/custom-oauth-provider/*`（第 202-211 行）。
 
-### Other External Services
+### 其他外部服务
 
-- **Cloudflare Turnstile** — bot protection on register/login/reset/checkin. Middleware `middleware/turnstile-check.go`; keys `common.TurnstileSiteKey/SecretKey`.
-- **io.net** — GPU cluster / model deployment management. Client `pkg/ionet`; API key from `OptionMap["model_deployment.ionet.api_key"]` (`controller/deployment.go` line 19). Routes `/api/deployments/*`.
-- **Uptime Kuma** — external status page fetch. `controller/uptime_kuma.go` polls `/api/status-page/` and `/api/status-page/heartbeat/` (constants lines 22-23).
-- **Pyroscope** — continuous Go profiling (optional). `common/pyro.go` `StartPyroScope()` (env `PYROSCOPE_URL`).
-- **pprof** — Go runtime profiling on `:8005` when `ENABLE_PPROF=true` (`main.go` lines 153-159).
-- **Prometheus** — client libs pulled in transitively via pyroscope (`go.mod` lines 143-146).
-- **OpenAI Codex OAuth** — token refresh against `https://auth.openai.com/oauth/token` with client ID `app_EMoamEEZ73f0CkXaXp7hrann` (`service/codex_oauth.go` lines 17-19).
-- **Umami Analytics** — script injected into embedded `index.html` when `UMAMI_WEBSITE_ID` set (`main.go` `InjectUmamiAnalytics` line 218).
-- **Google Analytics (GA4)** — gtag injected when `GOOGLE_ANALYTICS_ID` set (`main.go` `InjectGoogleAnalytics` line 239).
+- **Cloudflare Turnstile** —— 注册/登录/重置/签到的人机验证。中间件 `middleware/turnstile-check.go`；密钥 `common.TurnstileSiteKey/SecretKey`。
+- **io.net** —— GPU 集群/模型部署管理。客户端 `pkg/ionet`；API key 来自 `OptionMap["model_deployment.ionet.api_key"]`（`controller/deployment.go` 第 19 行）。路由 `/api/deployments/*`。
+- **Uptime Kuma** —— 外部状态页抓取。`controller/uptime_kuma.go` 轮询 `/api/status-page/` 与 `/api/status-page/heartbeat/`（常量第 22-23 行）。
+- **Pyroscope** —— 持续 Go 性能剖析（可选）。`common/pyro.go` `StartPyroScope()`（环境变量 `PYROSCOPE_URL`）。
+- **pprof** —— `ENABLE_PPROF=true` 时在 `:8005` 上的 Go 运行时性能剖析（`main.go` 第 153-159 行）。
+- **Prometheus** —— 客户端库经由 pyroscope 间接引入（`go.mod` 第 143-146 行）。
+- **OpenAI Codex OAuth** —— 对 `https://auth.openai.com/oauth/token` 刷新 token，客户端 ID 为 `app_EMoamEEZ73f0CkXaXp7hrann`（`service/codex_oauth.go` 第 17-19 行）。
+- **Umami Analytics** —— 当 `UMAMI_WEBSITE_ID` 设置时注入脚本到嵌入的 `index.html`（`main.go` `InjectUmamiAnalytics` 第 218 行）。
+- **Google Analytics (GA4)** —— 当 `GOOGLE_ANALYTICS_ID` 设置时注入 gtag（`main.go` `InjectGoogleAnalytics` 第 239 行）。
 
-## Data Storage
+## 数据存储
 
-**Databases:**
-- Primary: SQLite (default, file `one-api.db`), MySQL, or PostgreSQL — chosen by `SQL_DSN` scheme in `model/main.go` `chooseDB` (line 127).
-  - Client: GORM (`gorm.io/gorm v1.25.2`) + driver packages (`mysql`, `postgres`, `glebarez/sqlite`, `clickhouse`).
-  - Connection: env `SQL_DSN`. Pool: `SQL_MAX_IDLE_CONNS` (100), `SQL_MAX_OPEN_CONNS` (1000), `SQL_MAX_LIFETIME` (60s) — `model/main.go` lines 203-205.
-  - Migration: `migrateDB()` (`model/main.go` line 263) auto-migrates ~30 models including `Channel`, `Token`, `User`, `Log`, `Task`, `SubscriptionPlan`, `CasbinRule`, `AuthzRole`, `PerfMetric`, `SystemInstance`, `SystemTask`.
-- Log DB (optional, separate): `LOG_SQL_DSN` — supports MySQL, PostgreSQL, or **ClickHouse** (`model/main.go` `InitLogDB` line 222; ClickHouse DDL at `clickHouseLogCreateTableSQL` line 429). ClickHouse TTL via `LOG_SQL_CLICKHOUSE_TTL_DAYS`.
+**数据库：**
+- 主库：SQLite（默认，文件 `one-api.db`）、MySQL 或 PostgreSQL —— 由 `SQL_DSN` scheme 在 `model/main.go` `chooseDB`（第 127 行）选择。
+  - 客户端：GORM（`gorm.io/gorm v1.25.2`）+ 驱动包（`mysql`、`postgres`、`glebarez/sqlite`、`clickhouse`）。
+  - 连接：环境变量 `SQL_DSN`。连接池：`SQL_MAX_IDLE_CONNS`（100）、`SQL_MAX_OPEN_CONNS`（1000）、`SQL_MAX_LIFETIME`（60s）—— `model/main.go` 第 203-205 行。
+  - 迁移：`migrateDB()`（`model/main.go` 第 263 行）自动迁移约 30 个模型，包括 `Channel`、`Token`、`User`、`Log`、`Task`、`SubscriptionPlan`、`CasbinRule`、`AuthzRole`、`PerfMetric`、`SystemInstance`、`SystemTask`。
+- 日志库（可选、独立）：`LOG_SQL_DSN` —— 支持 MySQL、PostgreSQL 或 **ClickHouse**（`model/main.go` `InitLogDB` 第 222 行；ClickHouse DDL 见 `clickHouseLogCreateTableSQL` 第 429 行）。ClickHouse TTL 通过 `LOG_SQL_CLICKHOUSE_TTL_DAYS`。
 
-**File Storage:**
-- Local filesystem only (no S3/OSS). Disk cache under configured cache dir (`common/disk_cache.go`, `common/disk_cache_config.go`). Container `/data` volume (`docker-compose.yml` line 26).
+**文件存储：**
+- 仅本地文件系统（无 S3/OSS）。磁盘缓存位于配置的缓存目录（`common/disk_cache.go`、`common/disk_cache_config.go`）。容器 `/data` 卷（`docker-compose.yml` 第 26 行）。
 
-**Caching:**
-- Redis (optional) — `REDIS_CONN_STRING`; client `github.com/go-redis/redis/v8` (`common/redis.go`). Pool size `REDIS_POOL_SIZE` (10). Enables channel/option caching + rate limiting.
-- In-memory cache — `MEMORY_CACHE_ENABLED=true` (auto-on when Redis enabled; `main.go` lines 75-99). `SyncFrequency` (60s default) refresh.
-- Disk cache — `common/disk_cache.go` for large response bodies.
-- Async token cache — `bytedance/gopkg/cache/asynccache` (Vertex AI tokens, `relay/channel/vertex/service_account.go` line 31; 30-min expiry).
+**缓存：**
+- Redis（可选）—— `REDIS_CONN_STRING`；客户端 `github.com/go-redis/redis/v8`（`common/redis.go`）。连接池大小 `REDIS_POOL_SIZE`（10）。启用渠道/选项缓存 + 限流。
+- 内存缓存 —— `MEMORY_CACHE_ENABLED=true`（启用 Redis 时自动开启；`main.go` 第 75-99 行）。`SyncFrequency`（默认 60s）刷新。
+- 磁盘缓存 —— `common/disk_cache.go`，用于大响应体。
+- 异步 token 缓存 —— `bytedance/gopkg/cache/asynccache`（Vertex AI token，`relay/channel/vertex/service_account.go` 第 31 行；30 分钟过期）。
 
-## Authentication & Identity
+## 认证与身份
 
-**Auth Provider:** Custom (built-in).
+**认证提供商：** 自建（内置）。
 
-**Implementation:**
-- Web sessions — `gin-contrib/sessions` cookie store, secret from `SESSION_SECRET` (`main.go` lines 184-192). 30-day MaxAge, HttpOnly, SameSite=Strict.
-- API access tokens — `Authorization` header validated by `model.ValidateAccessToken` (`middleware/auth.go` `authHelper` line 37).
-- API keys (relay) — `TokenAuth()` middleware validates `sk-...` keys against `tokens` table (`middleware/auth.go`).
-- Roles — Guest(0) / Common(1) / Admin(10) / Root(100) (`common/constants.go` lines 200-205). Enforced by `UserAuth`, `AdminAuth`, `RootAuth` middleware.
-- Authorization — Casbin RBAC (`service/authz/`, `model/casbin_rule.go`, `model/authz_role.go`); policy reload synced across nodes (`main.go` line 105).
-- 2FA — TOTP via `github.com/pquerna/otp` (`model/twofa.go`, `controller/twofa.go`).
-- Passkey/WebAuthn — `github.com/go-webauthn/webauthn` (`controller/passkey.go`, `model/passkey.go`).
-- OAuth — see providers above; bindings stored in `user_oauth_bindings` table.
+**实现：**
+- Web session —— `gin-contrib/sessions` cookie 存储，密钥来自 `SESSION_SECRET`（`main.go` 第 184-192 行）。30 天 MaxAge，HttpOnly，SameSite=Strict。
+- API access token —— `Authorization` 头由 `model.ValidateAccessToken` 校验（`middleware/auth.go` `authHelper` 第 37 行）。
+- API key（中继）—— `TokenAuth()` 中间件针对 `tokens` 表校验 `sk-...` 密钥（`middleware/auth.go`）。
+- 角色 —— Guest(0) / Common(1) / Admin(10) / Root(100)（`common/constants.go` 第 200-205 行）。由 `UserAuth`、`AdminAuth`、`RootAuth` 中间件执行。
+- 鉴权 —— Casbin RBAC（`service/authz/`、`model/casbin_rule.go`、`model/authz_role.go`）；策略重载在节点间同步（`main.go` 第 105 行）。
+- 2FA —— 通过 `github.com/pquerna/otp` 的 TOTP（`model/twofa.go`、`controller/twofa.go`）。
+- Passkey/WebAuthn —— `github.com/go-webauthn/webauthn`（`controller/passkey.go`、`model/passkey.go`）。
+- OAuth —— 见上方提供商；绑定存储于 `user_oauth_bindings` 表。
 
-## Monitoring & Observability
+## 监控与可观测性
 
-**Error Tracking:** None (no Sentry/bugsnag). Errors go to file logger (`logger/logger.go`) + `common.SysError`.
+**错误追踪：** 无（无 Sentry/bugsnag）。错误进入文件日志（`logger/logger.go`）+ `common.SysError`。
 
-**Logs:**
-- Custom file logger in `./logs` (`logger/logger.go`, `common/init.go` `LogDir` flag default `./logs`).
-- Request/consume logs persisted to DB `logs` table (or ClickHouse).
-- Optional `ERROR_LOG_ENABLED` flag.
+**日志：**
+- 自定义文件日志位于 `./logs`（`logger/logger.go`、`common/init.go` `LogDir` 标志默认 `./logs`）。
+- 请求/消费日志持久化到 DB `logs` 表（或 ClickHouse）。
+- 可选 `ERROR_LOG_ENABLED` 标志。
 
-**Profiling:**
-- Pyroscope (continuous) — `common/pyro.go`.
-- pprof (on-demand) — `net/http/pprof` on `:8005` when `ENABLE_PPROF=true`.
-- `github.com/shirou/gopsutil` — system metrics (`common/system_monitor.go`).
-- Built-in performance stats API — `/api/performance/*` (`controller/performance.go`), perf metrics `/api/perf-metrics/*` (`controller/perf_metrics.go`), `pkg/perf_metrics`.
+**性能剖析：**
+- Pyroscope（持续）—— `common/pyro.go`。
+- pprof（按需）—— `ENABLE_PPROF=true` 时在 `:8005` 上的 `net/http/pprof`。
+- `github.com/shirou/gopsutil` —— 系统指标（`common/system_monitor.go`）。
+- 内置性能统计 API —— `/api/performance/*`（`controller/performance.go`），性能指标 `/api/perf-metrics/*`（`controller/perf_metrics.go`），`pkg/perf_metrics`。
 
-## CI/CD & Deployment
+## CI/CD 与部署
 
-**Hosting:**
-- Container image `calciumion/new-api:latest` (Dockerfile).
-- Electron desktop bundles (mac dmg/zip, win nsis/portable, linux AppImage/deb) via `electron-builder` (`electron/package.json`).
-- Systemd service (`new-api.service`).
-- Bare binary via `go build` (`Dockerfile` line 39).
+**托管：**
+- 容器镜像 `calciumion/new-api:latest`（Dockerfile）。
+- Electron 桌面包（mac dmg/zip、win nsis/portable、linux AppImage/deb）通过 `electron-builder`（`electron/package.json`）。
+- systemd 服务（`new-api.service`）。
+- 裸二进制通过 `go build`（`Dockerfile` 第 39 行）。
 
-**CI Pipeline:** Not detected (no `.github/workflows` in scanned scope; build is `make`/Docker-driven).
+**CI 流水线：** 未检测到（扫描范围内无 `.github/workflows`；构建由 `make`/Docker 驱动）。
 
-## Environment Configuration
+## 环境配置
 
-**Required env vars (production):**
-- `SQL_DSN` — primary DB (PostgreSQL recommended for multi-node; `docker-compose.yml` line 29).
-- `SESSION_SECRET` — mandatory for multi-node; panics if left as default `random_string` (`common/init.go` line 51).
-- `CRYPTO_SECRET` — token encryption (defaults to `SESSION_SECRET`).
+**所需环境变量（生产）：**
+- `SQL_DSN` —— 主数据库（多节点推荐 PostgreSQL；`docker-compose.yml` 第 29 行）。
+- `SESSION_SECRET` —— 多节点必需；若保持默认 `random_string` 则 panic（`common/init.go` 第 51 行）。
+- `CRYPTO_SECRET` —— token 加密（默认为 `SESSION_SECRET`）。
 
-**Optional env vars:**
-- `LOG_SQL_DSN`, `LOG_SQL_CLICKHOUSE_TTL_DAYS` — separate log DB / ClickHouse TTL.
-- `REDIS_CONN_STRING`, `REDIS_POOL_SIZE` — cache & rate limit.
-- `NODE_TYPE=slave`, `NODE_NAME` — multi-instance identity.
-- `PORT`, `GIN_MODE=debug`, `DEBUG=true`.
-- `SQLITE_PATH`, `SYNC_FREQUENCY`, `BATCH_UPDATE_ENABLED`, `BATCH_UPDATE_INTERVAL`.
-- `RELAY_TIMEOUT`, `RELAY_IDLE_CONN_TIMEOUT`, `RELAY_MAX_IDLE_CONNS`, `RELAY_MAX_IDLE_CONNS_PER_HOST`.
-- `STREAMING_TIMEOUT`, `MAX_FILE_DOWNLOAD_MB`, `MAX_REQUEST_BODY_MB`, `FORCE_STREAM_OPTION`, `GET_MEDIA_TOKEN`.
-- `TLS_INSECURE_SKIP_VERIFY`, `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY` (relay client respects proxy env; `service/http_client.go` line 42).
-- `GLOBAL_API_RATE_LIMIT*`, `GLOBAL_WEB_RATE_LIMIT*`, `CRITICAL_RATE_LIMIT*`, `SEARCH_RATE_LIMIT*`.
-- `ENABLE_PPROF`, `PYROSCOPE_URL`, `PYROSCOPE_APP_NAME`, `PYROSCOPE_BASIC_AUTH_*`.
-- `GOOGLE_ANALYTICS_ID`, `UMAMI_WEBSITE_ID`, `UMAMI_SCRIPT_URL`.
-- `CHANNEL_UPDATE_FREQUENCY`, `GENERATE_DEFAULT_TOKEN`, `ERROR_LOG_ENABLED`.
-- `GEMINI_SAFETY_SETTING`, `COHERE_SAFETY_SETTING`, `AZURE_DEFAULT_API_VERSION`.
-- `TRUSTED_REDIRECT_DOMAINS` — allowlist for payment success/cancel redirect URLs (`common/init.go` line 174).
-- `FRONTEND_BASE_URL` — serve frontend separately & redirect (`router/main.go` line 20).
+**可选环境变量：**
+- `LOG_SQL_DSN`、`LOG_SQL_CLICKHOUSE_TTL_DAYS` —— 独立日志库 / ClickHouse TTL。
+- `REDIS_CONN_STRING`、`REDIS_POOL_SIZE` —— 缓存与限流。
+- `NODE_TYPE=slave`、`NODE_NAME` —— 多实例身份。
+- `PORT`、`GIN_MODE=debug`、`DEBUG=true`。
+- `SQLITE_PATH`、`SYNC_FREQUENCY`、`BATCH_UPDATE_ENABLED`、`BATCH_UPDATE_INTERVAL`。
+- `RELAY_TIMEOUT`、`RELAY_IDLE_CONN_TIMEOUT`、`RELAY_MAX_IDLE_CONNS`、`RELAY_MAX_IDLE_CONNS_PER_HOST`。
+- `STREAMING_TIMEOUT`、`MAX_FILE_DOWNLOAD_MB`、`MAX_REQUEST_BODY_MB`、`FORCE_STREAM_OPTION`、`GET_MEDIA_TOKEN`。
+- `TLS_INSECURE_SKIP_VERIFY`、`HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`（中继客户端遵循代理环境变量；`service/http_client.go` 第 42 行）。
+- `GLOBAL_API_RATE_LIMIT*`、`GLOBAL_WEB_RATE_LIMIT*`、`CRITICAL_RATE_LIMIT*`、`SEARCH_RATE_LIMIT*`。
+- `ENABLE_PPROF`、`PYROSCOPE_URL`、`PYROSCOPE_APP_NAME`、`PYROSCOPE_BASIC_AUTH_*`。
+- `GOOGLE_ANALYTICS_ID`、`UMAMI_WEBSITE_ID`、`UMAMI_SCRIPT_URL`。
+- `CHANNEL_UPDATE_FREQUENCY`、`GENERATE_DEFAULT_TOKEN`、`ERROR_LOG_ENABLED`。
+- `GEMINI_SAFETY_SETTING`、`COHERE_SAFETY_SETTING`、`AZURE_DEFAULT_API_VERSION`。
+- `TRUSTED_REDIRECT_DOMAINS` —— 支付成功/取消跳转 URL 的白名单（`common/init.go` 第 174 行）。
+- `FRONTEND_BASE_URL` —— 单独提供前端并跳转（`router/main.go` 第 20 行）。
 
-Full env parsing: `common/init.go` `InitEnv()` (line 31) + `initConstantEnv()` (line 134). SMTP/OAuth/payment provider credentials are admin-configured at runtime via the DB-backed options table (`model/option.go`), not env vars.
+完整环境变量解析：`common/init.go` `InitEnv()`（第 31 行）+ `initConstantEnv()`（第 134 行）。SMTP/OAuth/支付提供商凭证由管理员在运行时通过基于 DB 的 options 表配置（`model/option.go`），不通过环境变量。
 
-**Secrets location:**
-- `.env` file (loaded by `godotenv`; existence noted only — never read by tooling).
-- DB `options` table (`model/option.go`) — admin-entered via UI; keys containing `Secret`/`Token` are masked from `GetOptions` (`common/constants.go` line 73 comment).
-- Channel API keys — `channels` DB table.
+**密钥位置：**
+- `.env` 文件（由 `godotenv` 加载；仅记录存在 —— 从不被工具读取）。
+- DB `options` 表（`model/option.go`）—— 管理员通过 UI 录入；包含 `Secret`/`Token` 的键在 `GetOptions` 中被掩码（`common/constants.go` 第 73 行注释）。
+- 渠道 API key —— `channels` DB 表。
 
-## Webhooks & Callbacks
+## Webhook 与回调
 
-**Incoming (this server receives):**
-- `POST /api/stripe/webhook` — Stripe checkout events (`router/api-router.go` line 57; signature-verified in `controller/topup_stripe.go`).
-- `POST /api/creem/webhook` — Creem payment events (line 58; HMAC-SHA256 verified `controller/topup_creem.go`).
-- `POST /api/waffo/webhook` — Waffo legacy gateway (line 59).
-- `POST /api/waffo-pancake/webhook/:env` — Waffo Pancake checkout events (line 62; `:env` = test|prod).
-- `GET/POST /api/user/epay/notify` — EPay async notify (lines 76-77).
-- `GET/POST /api/subscription/epay/notify`, `/api/subscription/epay/return` — EPay subscription callbacks (lines 180-183).
-- `GET /api/oauth/:provider` — OAuth provider redirects back with `code` (line 54).
+**入站（本服务器接收）：**
+- `POST /api/stripe/webhook` —— Stripe 结账事件（`router/api-router.go` 第 57 行；签名校验在 `controller/topup_stripe.go`）。
+- `POST /api/creem/webhook` —— Creem 支付事件（第 58 行；HMAC-SHA256 校验 `controller/topup_creem.go`）。
+- `POST /api/waffo/webhook` —— Waffo 传统网关（第 59 行）。
+- `POST /api/waffo-pancake/webhook/:env` —— Waffo Pancake 结账事件（第 62 行；`:env` = test|prod）。
+- `GET/POST /api/user/epay/notify` —— EPay 异步通知（第 76-77 行）。
+- `GET/POST /api/subscription/epay/notify`、`/api/subscription/epay/return` —— EPay 订阅回调（第 180-183 行）。
+- `GET /api/oauth/:provider` —— OAuth 提供商带 `code` 回跳（第 54 行）。
 
-**Outgoing (this server sends):**
-- Outbound webhook notifications to admin-configured URL — `service/webhook.go` `SendWebhookNotify` (HMAC-SHA256 signed; line 35). Triggered for quota exceed, channel updates, channel tests (`dto/notify.go`).
-- Email notifications via SMTP — `common/email.go` `SendEmail`; `service/user_notify.go` `NotifyUser` / `NotifyRootUser` / `NotifyUpstreamModelUpdateWatchers`.
-- Relay requests to all upstream LLM providers (see provider table above) — via shared HTTP client `service/http_client.go` `GetHttpClient()` with SSRF protection (`common/ssrf_protection.go`, `common/url_validator.go`).
-- OAuth token exchange & user-info fetches to GitHub, Discord, OIDC, LinuxDO, WeChat proxy, Telegram.
-- Codex OAuth token refresh to `https://auth.openai.com/oauth/token` (`service/codex_oauth.go`).
-- Vertex AI service-account JWT exchange to Google OAuth2 token endpoint (`relay/channel/vertex/service_account.go`).
-- io.net deployment API calls (`controller/deployment.go` via `pkg/ionet.Client`).
-- Uptime Kuma status polling (`controller/uptime_kuma.go`).
-- Pyroscope profile uploads (`common/pyro.go`).
+**出站（本服务器发送）：**
+- 出站 webhook 通知到管理员配置的 URL —— `service/webhook.go` `SendWebhookNotify`（HMAC-SHA256 签名；第 35 行）。触发于配额超限、渠道更新、渠道测试（`dto/notify.go`）。
+- 邮件通知通过 SMTP —— `common/email.go` `SendEmail`；`service/user_notify.go` `NotifyUser` / `NotifyRootUser` / `NotifyUpstreamModelUpdateWatchers`。
+- 中继请求到所有上游 LLM 提供商（见上方提供商表）—— 通过共享 HTTP 客户端 `service/http_client.go` `GetHttpClient()`，含 SSRF 防护（`common/ssrf_protection.go`、`common/url_validator.go`）。
+- OAuth token 交换与用户信息抓取到 GitHub、Discord、OIDC、LinuxDO、微信代理、Telegram。
+- Codex OAuth token 刷新到 `https://auth.openai.com/oauth/token`（`service/codex_oauth.go`）。
+- Vertex AI 服务账号 JWT 交换到 Google OAuth2 token 端点（`relay/channel/vertex/service_account.go`）。
+- io.net 部署 API 调用（`controller/deployment.go` 通过 `pkg/ionet.Client`）。
+- Uptime Kuma 状态轮询（`controller/uptime_kuma.go`）。
+- Pyroscope 性能剖析数据上传（`common/pyro.go`）。
 
 ---
 
-*Integration audit: 2026-07-01*
+*集成审计：2026-07-01*
