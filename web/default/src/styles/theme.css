@@ -81,6 +81,22 @@ For commercial licensing, please contact support@quantumnous.com
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* Landing brand tokens */
+  --color-landing-primary: var(--landing-primary);
+  --color-landing-primary-hover: var(--landing-primary-hover);
+  --color-landing-primary-foreground: var(--landing-primary-foreground);
+  --color-landing-hero-bg-start: var(--landing-hero-bg-start);
+  --color-landing-hero-bg-end: var(--landing-hero-bg-end);
+  --color-landing-title: var(--landing-title);
+  --color-landing-body: var(--landing-body);
+  --color-landing-muted: var(--landing-muted);
+  --color-landing-faded: var(--landing-faded);
+  --color-landing-subtle: var(--landing-subtle);
+  --color-landing-border: var(--landing-border);
+  --color-landing-tag-border: var(--landing-tag-border);
+  --color-landing-divider: var(--landing-divider);
+  --color-landing-dot: var(--landing-dot);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -168,6 +184,22 @@ For commercial licensing, please contact support@quantumnous.com
     var(--foreground) 24%,
     var(--background)
   );
+
+  /* ── Landing page brand tokens (light) ── */
+  --landing-primary: #0A6E7C;
+  --landing-primary-hover: #0891A0;
+  --landing-primary-foreground: #FFFFFF;
+  --landing-hero-bg-start: #F0F7FA;
+  --landing-hero-bg-end: #E8F1F6;
+  --landing-title: #1A2B3C;
+  --landing-body: #3A4B5A;
+  --landing-muted: #5A6B7A;
+  --landing-faded: #8A9AAA;
+  --landing-subtle: #A0AEB8;
+  --landing-border: #D5DDE2;
+  --landing-tag-border: #D5E8EC;
+  --landing-divider: #E5EAED;
+  --landing-dot: #C5CDD2;
 }
 
 .dark {
@@ -236,4 +268,20 @@ For commercial licensing, please contact support@quantumnous.com
     var(--foreground) 34%,
     var(--background)
   );
+
+  /* ── Landing page brand tokens (dark) ── */
+  --landing-primary: #22D3EE;
+  --landing-primary-hover: #67E8F9;
+  --landing-primary-foreground: #0A1C20;
+  --landing-hero-bg-start: #111C20;
+  --landing-hero-bg-end: #0D1618;
+  --landing-title: #DCE8EE;
+  --landing-body: #9BB5C4;
+  --landing-muted: #7A94A5;
+  --landing-faded: #5A7A8A;
+  --landing-subtle: #4A6A78;
+  --landing-border: #2A4048;
+  --landing-tag-border: #2A4852;
+  --landing-divider: #253A42;
+  --landing-dot: #4A6A78;
 }
