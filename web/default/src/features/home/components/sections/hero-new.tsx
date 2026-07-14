@@ -113,23 +113,7 @@ export function HeroNew({ isAuthenticated = false }: HeroNewProps) {
                 {t('Get Started Free')}
                 <ArrowRight className='ml-1.5 size-4' />
               </Button>
-              <Button
-                variant='outline'
-                className='h-12 rounded-xl border-landing-border bg-white px-7 text-[15px] font-medium text-landing-body shadow-sm hover:bg-gray-50 dark:border-landing-border dark:bg-transparent dark:hover:bg-landing-hero-bg-start'
-                render={
-                  docsUrl.startsWith('http') ? (
-                    <a
-                      href={docsUrl}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                    />
-                  ) : (
-                    <Link to={docsUrl} />
-                  )
-                }
-              >
-                {t('View Docs')}
-              </Button>
+             
             </>
           )}
         </div>
