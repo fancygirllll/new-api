@@ -281,7 +281,7 @@ func TestSendEmailUsesExplicitStartTLSWithInsecureCertificate(t *testing.T) {
 	SMTPAccount = "sender@example.com"
 	SMTPFrom = "sender@example.com"
 	SMTPToken = "secret"
-	SystemName = "New API"
+	SystemName = "TrustHarbor"
 
 	err := SendEmail("Verification", "receiver@example.com", "<p>123456</p>")
 	require.NoError(t, err)
@@ -309,7 +309,7 @@ func TestSendEmailExplicitStartTLSRequiresServerSupport(t *testing.T) {
 	SMTPAccount = "sender@example.com"
 	SMTPFrom = "sender@example.com"
 	SMTPToken = "secret"
-	SystemName = "New API"
+	SystemName = "TrustHarbor"	
 
 	err := SendEmail("Verification", "receiver@example.com", "<p>123456</p>")
 	require.Error(t, err)
