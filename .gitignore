@@ -44,3 +44,12 @@ service/openaicompat/chat_responses_live_local_test.go
 .codegraph/
 .workbuddy/
 修改记录/
+
+# AI assistant rules and project memory (local-only)
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursor/
+.trae/
+.planning/
+.agent/
