@@ -35,7 +35,8 @@ export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
 
   return (
-    <LayoutProvider>
+    <div className='min-h-svh bg-gradient-to-br from-landing-hero-bg-start to-landing-hero-bg-end'>
+      <LayoutProvider>
       <SearchProvider>
         <SidebarProvider defaultOpen={defaultOpen} className='flex-col'>
           <SkipToMain />
@@ -56,5 +57,6 @@ export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
         </SidebarProvider>
       </SearchProvider>
     </LayoutProvider>
+    </div>
   )
 }
