@@ -151,12 +151,12 @@ export function HeroNew({ isAuthenticated = false }: HeroNewProps) {
           siteName: systemName,
         })}
       </p>
-       <p className='absolute bottom-2 left-0 right-0 text-center text-[11px] text-landing-subtle opacity-0 landing-animate-fade-up' 
-    style={{ animationDelay: '650ms' }}> 
-   <a href='https://beian.miit.gov.cn/' target='_blank' rel='noopener noreferrer'> 
-     粤ICP备2026096811号 
-   </a> 
- </p> 
+      <p className='absolute bottom-2 left-0 right-0 text-center text-[11px] text-landing-subtle opacity-0 landing-animate-fade-up'
+         style={{ animationDelay: '650ms' }}>
+        <a href='https://beian.miit.gov.cn/' target='_blank' rel='noopener noreferrer'>
+          粤ICP备2026096811号
+        </a>
+      </p>
     </section>
   )
 }
