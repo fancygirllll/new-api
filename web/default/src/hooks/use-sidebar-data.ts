@@ -120,8 +120,8 @@ export function useSidebarData(): SidebarData {
             title: t('Distributor Console'),
             url: '/distributor',
             icon: Store,
-            // 张力点 #3：精确匹配 role===5，非 requiredRole 阈值——
-            // admin(10)/root(100) 不见死入口（服务端 DistributorAuth 是真防线）
+            // Tension point #3: exact role===5 match rather than the requiredRole threshold—
+            // admin(10)/root(100) never see a dead entry (server-side DistributorAuth is the real defense)
             distributorOnly: true,
           },
         ],

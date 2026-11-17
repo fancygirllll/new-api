@@ -95,7 +95,7 @@ func getImageToken(c *gin.Context, fileMeta *types.FileMeta, model string, strea
 		fileMeta.Detail = "high"
 	}
 
-	// 使用统一的文件服务获取图片配置
+	// Use the unified file service to get the image config
 	config, format, err := GetImageConfig(c, fileMeta.Source)
 	if err != nil {
 		return 0, err
@@ -177,7 +177,7 @@ func getImageToken(c *gin.Context, fileMeta *types.FileMeta, model string, strea
 }
 
 func EstimateRequestToken(c *gin.Context, meta *types.TokenCountMeta, info *relaycommon.RelayInfo) (int, error) {
-	// 是否统计token
+	// Whether to count tokens
 	if !constant.CountToken {
 		return 0, nil
 	}
@@ -208,7 +208,7 @@ func EstimateRequestToken(c *gin.Context, meta *types.TokenCountMeta, info *rela
 			if err != nil {
 				return 0, fmt.Errorf("error getting audio duration: %v", err)
 			}
-			// 一分钟 1000 token，与 $price / minute 对齐
+			// 1000 tokens per minute, aligned with $price / minute
 			totalAudioToken += int(math.Round(math.Ceil(duration) / 60.0 * 1000))
 		}
 		return totalAudioToken, nil
@@ -225,7 +225,7 @@ func EstimateRequestToken(c *gin.Context, meta *types.TokenCountMeta, info *rela
 
 	if info.RelayFormat == types.RelayFormatOpenAI {
 		tkm += meta.ToolsCount * 8
-		tkm += meta.MessagesCount * 3 // 每条消息的格式化token数量
+		tkm += meta.MessagesCount * 3 // Formatting tokens per message
 		tkm += meta.NameCount * 3
 		tkm += 3
 	}
@@ -236,27 +236,27 @@ func EstimateRequestToken(c *gin.Context, meta *types.TokenCountMeta, info *rela
 		shouldFetchFiles = false
 	}
 
-	// 是否本地计算媒体token数量
+	// Whether to count media tokens locally
 	if !constant.GetMediaToken {
 		shouldFetchFiles = false
 	}
 
-	// 是否在非流模式下本地计算媒体token数量
+	// Whether to count media tokens locally in non-stream mode
 	if !constant.GetMediaTokenNotStream && !info.IsStream {
 		shouldFetchFiles = false
 	}
 
-	// 使用统一的文件服务获取文件类型
+	// Use the unified file service to get the file type
 	for _, file := range meta.Files {
 		if file.Source == nil {
 			continue
 		}
 
-		// 如果文件类型未知且需要获取，通过 MIME 类型检测
+		// If the file type is unknown and needed, detect it via MIME type
 		if file.FileType == "" || (file.Source.IsURL() && shouldFetchFiles) {
-			// 注意：这里我们直接调用 LoadFileSource 而不是 GetMimeType
-			// 因为 GetMimeType 内部可能会调用 GetFileTypeFromUrl (HEAD 请求)
-			// 而我们这里既然要计算 token，通常需要完整数据
+			// Note: we call LoadFileSource directly instead of GetMimeType
+			// because GetMimeType may internally call GetFileTypeFromUrl (HEAD request)
+			// and counting tokens usually requires the full data
 			cachedData, err := LoadFileSource(c, file.Source, "token_counter")
 			if err != nil {
 				if shouldFetchFiles {
@@ -391,7 +391,7 @@ func CountAudioTokenOutput(audioBase64 string, audioFormat string) (int, error) 
 	return int(duration / 60 * 200 / 0.24), nil
 }
 
-// CountTextToken 统计文本的token数量，仅OpenAI模型使用tokenizer，其余模型使用估算
+// CountTextToken counts text tokens; only OpenAI models use a tokenizer, others use estimation
 func CountTextToken(text string, model string) int {
 	if text == "" {
 		return 0
@@ -400,7 +400,7 @@ func CountTextToken(text string, model string) int {
 		tokenEncoder := getTokenEncoder(model)
 		return getTokenNum(tokenEncoder, text)
 	} else {
-		// 非openai模型，使用tiktoken-go计算没有意义，使用估算节省资源
+		// For non-OpenAI models, using tiktoken-go is meaningless; estimate instead to save resources
 		return EstimateTokenByModel(model, text)
 	}
 }

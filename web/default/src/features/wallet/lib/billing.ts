@@ -46,7 +46,7 @@ export const STATUS_CONFIG: Record<TopupStatus, StatusConfig> = {
     variant: 'danger',
     label: 'Expired',
   },
-  // 契约附录 C1：A13 作废动作产生 refunded（此前缺失导致作废单误显示为 Pending）
+  // Contract appendix C1: the A13 void action produces refunded (previously missing, so voided orders were wrongly shown as Pending)
   refunded: {
     variant: 'danger',
     label: 'Refunded',

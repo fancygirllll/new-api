@@ -36,16 +36,16 @@ const PAGE_SIZE = 10
 
 interface AttributionChangesSheetProps {
   open: boolean
-  /** 目标客户（B3 user_id 过滤；null=关闭） */
+  /** Target user (B3 user_id filter; null=closed) */
   userId: number | null
   username: string
   onOpenChange: (open: boolean) => void
 }
 
 /**
- * G-3 归属审计抽屉（B3 GET /api/attribution/changes?user_id=，AdminAuth）。
- * 时间线逐行渲染：变更前后归属（inviter id，0=无归属）+ source + operator +
- * 时间 + reason。行形状 = model/attribution_change.go json tag 逐字。
+ * G-3 attribution audit drawer (B3 GET /api/attribution/changes?user_id=, AdminAuth).
+ * Timeline rendered row by row: attribution before/after change (inviter id, 0=no attribution) + source + operator +
+ * time + reason. Row shape = model/attribution_change.go json tag verbatim.
  */
 export function AttributionChangesSheet({
   open,
@@ -58,7 +58,7 @@ export function AttributionChangesSheet({
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
-  // 请求序号守卫：仅最新一次请求允许写回状态（rate-history-sheet 同款）
+  // Request sequence guard: only the latest request may write back state (same as rate-history-sheet)
   const reqSeq = useRef(0)
 
   const load = useCallback(async () => {
@@ -79,7 +79,7 @@ export function AttributionChangesSheet({
     }
   }, [userId, page])
 
-  // 关闭或切换目标用户时重置分页与旧数据（关闭即重置语义）
+  // Reset pagination and stale data when closing or switching the target user (closing implies reset)
   useEffect(() => {
     setPage(1)
     setRows([])

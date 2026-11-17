@@ -20,14 +20,12 @@ import (
 func modelPriceNotConfiguredError(modelName string, userId int) error {
 	if model.IsAdmin(userId) {
 		return fmt.Errorf(
-			"模型 %s 的价格未配置。请前往「系统设置 → 运营设置」开启自用模式，或在「系统设置 → 分组与模型定价设置」中为该模型配置价格；"+
-				"Model %s price not configured. Go to System Settings → Operation Settings to enable self-use mode, or configure the model price in System Settings → Group & Model Pricing.",
+			"Model %s price is not configured. Go to System Settings → Operation Settings to enable self-use mode, or configure the price for model %s in System Settings → Group & Model Pricing.",
 			modelName, modelName,
 		)
 	}
 	return fmt.Errorf(
-		"模型 %s 的价格尚未由管理员配置，暂时无法使用，请联系站点管理员开启该模型；"+
-			"Model %s has not been priced by the administrator yet. Please contact the site administrator to enable this model.",
+		"Model %s has not been priced by the administrator yet and is temporarily unavailable. Please contact the site administrator to enable model %s.",
 		modelName, modelName,
 	)
 }
@@ -106,7 +104,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 		cacheRatio, _ = ratio_setting.GetCacheRatio(info.OriginModelName)
 		cacheCreationRatio, _ = ratio_setting.GetCreateCacheRatio(info.OriginModelName)
 		cacheCreationRatio5m = cacheCreationRatio
-		// 固定1h和5min缓存写入价格的比例
+		// Fix the ratio of 1h and 5min cache write prices.
 		cacheCreationRatio1h = cacheCreationRatio * claudeCacheCreation1hMultiplier
 		imageRatio, _ = ratio_setting.GetImageRatio(info.OriginModelName)
 		audioRatio = ratio_setting.GetAudioRatio(info.OriginModelName)
@@ -163,7 +161,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	return priceData, nil
 }
 
-// ModelPriceHelperPerCall 按次/按量计费的 PriceHelper (MJ、Task)
+// ModelPriceHelperPerCall is the PriceHelper for per-call/per-usage billing (MJ, Task).
 func ModelPriceHelperPerCall(c *gin.Context, info *relaycommon.RelayInfo) (types.PriceData, error) {
 	groupRatioInfo := HandleGroupRatio(c, info)
 
@@ -202,7 +200,7 @@ func ModelPriceHelperPerCall(c *gin.Context, info *relaycommon.RelayInfo) (types
 			}
 		}
 	} else {
-		// 按量计费：以模型倍率的一半作为预扣额度
+		// Usage-based billing: pre-consume half of the model ratio.
 		quota = int(modelRatio / 2 * common.QuotaPerUnit * groupRatioInfo.GroupRatio)
 		modelPrice = -1
 		if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {

@@ -18,7 +18,7 @@ const (
 	ChannelTestModePassiveRecovery = "passive_recovery"
 )
 
-// 默认配置
+// Default configuration
 var monitorSetting = MonitorSetting{
 	AutoTestChannelEnabled: false,
 	AutoTestChannelMinutes: 10,
@@ -26,7 +26,7 @@ var monitorSetting = MonitorSetting{
 }
 
 func init() {
-	// 注册到全局配置管理器
+	// Register with the global config manager
 	config.GlobalConfig.Register("monitor_setting", &monitorSetting)
 }
 

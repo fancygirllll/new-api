@@ -67,13 +67,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *common.RelayInfo, requestBody 
 	if info.IsStream {
 		return channel.DoApiRequest(a, c, info, requestBody)
 	}
-	// 首先发送创建消息请求，成功后再发送获取消息请求
-	// 发送创建消息请求
+	// First send the create message request, then send the retrieve message request on success.
+	// Send the create message request.
 	resp, err := channel.DoApiRequest(a, c, info, requestBody)
 	if err != nil {
 		return nil, err
 	}
-	// 解析 resp
+	// Parse resp.
 	var cozeResponse CozeChatResponse
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -85,7 +85,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *common.RelayInfo, requestBody 
 	}
 	c.Set("coze_conversation_id", cozeResponse.Data.ConversationId)
 	c.Set("coze_chat_id", cozeResponse.Data.Id)
-	// 轮询检查消息是否完成
+	// Poll until the message is complete.
 	for {
 		err, isComplete := checkIfChatComplete(a, c, info)
 		if err != nil {
@@ -97,7 +97,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *common.RelayInfo, requestBody 
 		}
 		time.Sleep(time.Second * 1)
 	}
-	// 发送获取消息请求
+	// Send the retrieve message request.
 	return getChatDetail(a, c, info)
 }
 

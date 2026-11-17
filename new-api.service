@@ -8,9 +8,9 @@ Description=One API Service
 After=network.target
 
 [Service]
-User=ubuntu  # 注意修改用户名
-WorkingDirectory=/path/to/new-api  # 注意修改路径
-ExecStart=/path/to/new-api/new-api --port 3000 --log-dir /path/to/new-api/logs  # 注意修改路径和端口号
+User=ubuntu  # Change this username
+WorkingDirectory=/path/to/new-api  # Change this path
+ExecStart=/path/to/new-api/new-api --port 3000 --log-dir /path/to/new-api/logs  # Change this path and port
 Restart=always
 RestartSec=5
 

@@ -13,16 +13,18 @@ var ModelList = []string{
 
 var ChannelName = "doubao-video"
 
-// videoPriceKey 价格表的键：输出分辨率档（is1080p/is4k 均为 false 即 480p/720p 基准档）、输入是否含视频。
+// videoPriceKey is the price table key: the output resolution tier (both is1080p and is4k false
+// means the 480p/720p base tier) and whether the input contains video.
 type videoPriceKey struct {
 	is1080p  bool
 	is4k     bool
 	hasVideo bool
 }
 
-// videoPriceTable 各模型在不同 (输出分辨率档, 是否含视频输入) 下的单价（元/百万 token）。
-// 其中零值键 {480p/720p, 不含视频} 为基准价，等于管理员应配置的 ModelRatio；
-// 计费时取 实际单价/基准价 作为 OtherRatio。
+// videoPriceTable holds the unit price of each model for each (output resolution tier, whether
+// the input contains video) combination, in CNY per million tokens.
+// The zero-value key {480p/720p, no video} is the base price, equal to the ModelRatio the
+// administrator should configure; billing uses actual price / base price as the OtherRatio.
 var videoPriceTable = map[string]map[videoPriceKey]float64{
 	"doubao-seedance-2-0-260128": {
 		{hasVideo: false}:                46.0,
@@ -38,18 +40,20 @@ var videoPriceTable = map[string]map[videoPriceKey]float64{
 	},
 }
 
-// GetVideoInputRatio 返回指定模型在给定输出分辨率/是否含视频输入下，相对基准价的计费倍率。
-// 第二个返回值表示该模型是否配置了价格表；倍率为 1.0 时调用方可忽略该 OtherRatio。
+// GetVideoInputRatio returns the billing multiplier relative to the base price for the given
+// model, output resolution, and whether the input contains video.
+// The second return value reports whether the model has a configured price table; when the
+// multiplier is 1.0 the caller can ignore this OtherRatio.
 func GetVideoInputRatio(modelName, resolution string, hasVideo bool) (float64, bool) {
 	prices, ok := videoPriceTable[modelName]
-	base := prices[videoPriceKey{}] // 零值键 = {480p/720p, 不含视频} 基准价
+	base := prices[videoPriceKey{}] // Zero-value key = {480p/720p, no video} base price
 	if !ok || base <= 0 {
 		return 0, false
 	}
 	res := strings.ToLower(strings.TrimSpace(resolution))
 	price, ok := prices[videoPriceKey{is1080p: res == "1080p", is4k: res == "4k", hasVideo: hasVideo}]
 	if !ok {
-		// 未配置的组合（如 fast 无 1080p/4k，上游会自行报错）按基准价计费即可。
+		// Unconfigured combinations (e.g. fast has no 1080p/4k; upstream reports an error itself) are billed at the base price.
 		return 1.0, true
 	}
 	return price / base, true

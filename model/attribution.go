@@ -8,25 +8,25 @@ import (
 	"gorm.io/gorm"
 )
 
-// 归属管理错误变量（契约 01-CONTRACT.md §4.2 B1/B2 + §5 幂等与并发约定）。
-// controller 层据 sentinel 错误映射 HTTP 状态码：
+// Attribution management error variables (contract 01-CONTRACT.md §4.2 B1/B2 + §5 idempotency and concurrency conventions).
+// The controller layer maps sentinel errors to HTTP status codes:
 //   - ErrInvalidAffCode / ErrNotDistributor / ErrAlreadyBound → 400
 //   - ErrWindowExpired → 403
 //   - ErrUserNotFound / ErrDistributorNotFound → 404
 var (
-	ErrInvalidAffCode    = errors.New("aff code not found")
-	ErrNotDistributor    = errors.New("aff code owner is not a distributor")
-	ErrAlreadyBound      = errors.New("user already has an inviter")
-	ErrWindowExpired     = errors.New("rebind window expired")
-	ErrUserNotFound      = errors.New("user not found")
+	ErrInvalidAffCode      = errors.New("aff code not found")
+	ErrNotDistributor      = errors.New("aff code owner is not a distributor")
+	ErrAlreadyBound        = errors.New("user already has an inviter")
+	ErrWindowExpired       = errors.New("rebind window expired")
+	ErrUserNotFound        = errors.New("user not found")
 	ErrDistributorNotFound = errors.New("distributor not found")
 )
 
-// CanRebind 判断客户是否仍在自助补绑窗口内（契约 §2.4 + §4.1 M2）。
-// 纯函数：仅依赖入参与 time.Now()，不访问 DB 或全局可变状态。
-//   - mode=="unlimited" → 恒 true（任何时候仅受 inviter_id=0 约束）
-//   - mode=="days" → userCreatedAt + days*86400 > now（窗口内可补绑）
-//   - 其他 → false（防御性，不应出现于正常配置）
+// CanRebind reports whether the customer is still within the self-service rebind window (contract §2.4 + §4.1 M2).
+// Pure function: depends only on its arguments and time.Now(), with no DB or global mutable state access.
+//   - mode=="unlimited" -> always true (only constrained by inviter_id=0 at any time)
+//   - mode=="days" -> userCreatedAt + days*86400 > now (rebind allowed within the window)
+//   - otherwise -> false (defensive; should not occur in normal configuration)
 func CanRebind(userCreatedAt int64, mode string, days int) bool {
 	switch mode {
 	case "unlimited":
@@ -41,27 +41,27 @@ func CanRebind(userCreatedAt int64, mode string, days int) bool {
 	}
 }
 
-// SelfBindAttribution 在事务内执行自助补绑（契约 §4.2 B1 + §5 幂等与并发约定）。
-// 防重双道：
-//  1. 预查 InviterId != 0 → ErrAlreadyBound（快速拒绝，减少条件 UPDATE 竞争）
-//  2. 条件 UPDATE inviter_id=0 → affected=0 即 ErrAlreadyBound（并发防重最终防线）
+// SelfBindAttribution performs a self-service rebind inside a transaction (contract §4.2 B1 + §5 idempotency and concurrency conventions).
+// Two deduplication layers:
+//  1. Pre-check InviterId != 0 -> ErrAlreadyBound (fast rejection, reducing contention on the conditional UPDATE)
+//  2. Conditional UPDATE inviter_id=0 -> affected=0 means ErrAlreadyBound (final defense against concurrent duplication)
 //
-// 窗口校验先行（days 模式 created_at + days*86400 > now，unlimited 恒通过）。
-// 邀请码非分销商 → ErrNotDistributor（防止绑定到普通邀请人冒充分销商）。
-// 成功同事务写 AttributionChange{source: "self_bind"}。
+// Window validation runs first (days mode: created_at + days*86400 > now; unlimited always passes).
+// Invitation code not owned by a distributor -> ErrNotDistributor (prevents binding to a regular inviter posing as a distributor).
+// On success, write AttributionChange{source: "self_bind"} in the same transaction.
 //
-// 注意：此路径与 AdminBindAttribution 物理隔离——自助侧走条件 UPDATE（防重），
-// 管理员侧走无条件 UPDATE（F5 可覆盖已有归属）。
+// Note: this path is physically isolated from AdminBindAttribution - the self-service side uses a conditional UPDATE (deduplication),
+// while the admin side uses an unconditional UPDATE (F5 may overwrite existing attribution).
 func SelfBindAttribution(tx *gorm.DB, userId int, affCode string) error {
 	if affCode == "" {
 		return ErrInvalidAffCode
 	}
-	// 1. 邀请码对应用户
+	// 1. User corresponding to the invitation code
 	inviterId, err := GetUserIdByAffCode(affCode)
 	if err != nil || inviterId == 0 {
 		return ErrInvalidAffCode
 	}
-	// 2. 校验邀请人为分销商（防止绑定到普通邀请人）
+	// 2. Verify the inviter is a distributor (prevents binding to a regular inviter)
 	var inviter User
 	if e := tx.Select("id, role").First(&inviter, "id = ?", inviterId).Error; e != nil {
 		return ErrInvalidAffCode
@@ -69,20 +69,20 @@ func SelfBindAttribution(tx *gorm.DB, userId int, affCode string) error {
 	if inviter.Role != common.RoleDistributorUser {
 		return ErrNotDistributor
 	}
-	// 3. 查当前用户（获取 CreatedAt + InviterId）
+	// 3. Load the current user (to get CreatedAt + InviterId)
 	var user User
 	if e := tx.First(&user, "id = ?", userId).Error; e != nil {
 		return ErrUserNotFound
 	}
-	// 4. 防重第一道：预查已有归属
+	// 4. First dedup layer: pre-check existing attribution
 	if user.InviterId != 0 {
 		return ErrAlreadyBound
 	}
-	// 5. 窗口校验先行
+	// 5. Window validation first
 	if !CanRebind(user.CreatedAt, common.AffRebindWindowMode, common.AffRebindWindowDays) {
 		return ErrWindowExpired
 	}
-	// 6. 条件 UPDATE（防并发重复绑定，affected=0 → 已被并发抢绑）
+	// 6. Conditional UPDATE (prevents concurrent duplicate binding; affected=0 -> already bound concurrently)
 	res := tx.Model(&User{}).
 		Where("id = ? AND inviter_id = 0", userId).
 		Update("inviter_id", inviterId)
@@ -92,7 +92,7 @@ func SelfBindAttribution(tx *gorm.DB, userId int, affCode string) error {
 	if res.RowsAffected == 0 {
 		return ErrAlreadyBound
 	}
-	// 7. 同事务审计（source=self_bind，operator_id=userId）
+	// 7. Audit in the same transaction (source=self_bind, operator_id=userId)
 	return tx.Create(&AttributionChange{
 		UserId:       userId,
 		OldInviterId: 0,
@@ -103,10 +103,10 @@ func SelfBindAttribution(tx *gorm.DB, userId int, affCode string) error {
 	}).Error
 }
 
-// AdminBindAttribution 在事务内执行管理员补绑（契约 §4.2 B2 + §5 F5 无条件覆盖）。
-// 与 SelfBindAttribution 物理隔离：自助侧走条件 UPDATE inviter_id=0（防重），
-// 管理员侧走无条件 UPDATE（F5，可覆盖已有归属，Old/New 全记录审计）。
-// 校验：目标用户存在 + distributor 存在 + distributor.Role==5。
+// AdminBindAttribution performs an admin rebind inside a transaction (contract §4.2 B2 + §5 F5 unconditional overwrite).
+// Physically isolated from SelfBindAttribution: the self-service side uses conditional UPDATE inviter_id=0 (deduplication),
+// while the admin side uses an unconditional UPDATE (F5, may overwrite existing attribution, auditing both Old/New).
+// Validation: target user exists + distributor exists + distributor.Role==5.
 func AdminBindAttribution(tx *gorm.DB, userId int, distributorId int, operatorId int, reason string) error {
 	var user User
 	if err := tx.First(&user, "id = ?", userId).Error; err != nil {
@@ -133,7 +133,7 @@ func AdminBindAttribution(tx *gorm.DB, userId int, distributorId int, operatorId
 	}).Error
 }
 
-// GetAttributionChanges 分页查询归属变更审计记录（契约 §4.2 B3）。
+// GetAttributionChanges paginates attribution change audit records (contract §4.2 B3).
 func GetAttributionChanges(userId int, page *common.PageInfo) ([]AttributionChange, int64, error) {
 	var changes []AttributionChange
 	var total int64

@@ -1,4 +1,4 @@
-// 用于迁移检测的旧键，该文件下个版本会删除
+// Legacy keys used for migration detection; this file will be removed in the next release
 
 package controller
 
@@ -12,22 +12,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// MigrateConsoleSetting 迁移旧的控制台相关配置到 console_setting.*
+// MigrateConsoleSetting migrates legacy console settings to console_setting.*
 func MigrateConsoleSetting(c *gin.Context) {
-	// 读取全部 option
+	// Read all options
 	opts, err := model.AllOption()
 	if err != nil {
 		common.SysError("failed to get all options: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "获取配置失败，请稍后重试"})
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to get configuration, please try again later"})
 		return
 	}
-	// 建立 map
+	// Build the map
 	valMap := map[string]string{}
 	for _, o := range opts {
 		valMap[o.Key] = o.Value
 	}
 
-	// 处理 APIInfo
+	// Handle APIInfo
 	if v := valMap["ApiInfo"]; v != "" {
 		var arr []map[string]interface{}
 		if err := json.Unmarshal([]byte(v), &arr); err == nil {
@@ -39,12 +39,12 @@ func MigrateConsoleSetting(c *gin.Context) {
 		}
 		model.UpdateOption("ApiInfo", "")
 	}
-	// Announcements 直接搬
+	// Copy Announcements as-is
 	if v := valMap["Announcements"]; v != "" {
 		model.UpdateOption("console_setting.announcements", v)
 		model.UpdateOption("Announcements", "")
 	}
-	// FAQ 转换
+	// Convert FAQ
 	if v := valMap["FAQ"]; v != "" {
 		var arr []map[string]interface{}
 		if err := json.Unmarshal([]byte(v), &arr); err == nil {
@@ -70,11 +70,11 @@ func MigrateConsoleSetting(c *gin.Context) {
 		}
 		model.UpdateOption("FAQ", "")
 	}
-	// Uptime Kuma 迁移到新的 groups 结构（console_setting.uptime_kuma_groups）
+	// Migrate Uptime Kuma to the new groups structure (console_setting.uptime_kuma_groups)
 	url := valMap["UptimeKumaUrl"]
 	slug := valMap["UptimeKumaSlug"]
 	if url != "" && slug != "" {
-		// 仅当同时存在 URL 与 Slug 时才进行迁移
+		// Migrate only when both URL and Slug are present
 		groups := []map[string]interface{}{
 			{
 				"id":           1,
@@ -87,7 +87,7 @@ func MigrateConsoleSetting(c *gin.Context) {
 		bytes, _ := json.Marshal(groups)
 		model.UpdateOption("console_setting.uptime_kuma_groups", string(bytes))
 	}
-	// 清空旧键内容
+	// Clear the contents of the old keys
 	if url != "" {
 		model.UpdateOption("UptimeKumaUrl", "")
 	}
@@ -95,11 +95,11 @@ func MigrateConsoleSetting(c *gin.Context) {
 		model.UpdateOption("UptimeKumaSlug", "")
 	}
 
-	// 删除旧键记录
+	// Delete the old key records
 	oldKeys := []string{"ApiInfo", "Announcements", "FAQ", "UptimeKumaUrl", "UptimeKumaSlug"}
 	model.DB.Where("key IN ?", oldKeys).Delete(&model.Option{})
 
-	// 重新加载 OptionMap
+	// Reload OptionMap
 	model.InitOptionMap()
 	common.SysLog("console setting migrated")
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "migrated"})

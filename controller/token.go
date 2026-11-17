@@ -175,7 +175,7 @@ func AddToken(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgTokenNameTooLong)
 		return
 	}
-	// 非无限额度时，检查额度值是否超出有效范围
+	// For non-unlimited quota, check whether the quota value is within the valid range
 	if !token.UnlimitedQuota {
 		if token.RemainQuota < 0 {
 			common.ApiErrorI18n(c, i18n.MsgTokenQuotaNegative)
@@ -187,7 +187,7 @@ func AddToken(c *gin.Context) {
 			return
 		}
 	}
-	// 检查用户令牌数量是否已达上限
+	// Check whether the user's token count has reached the limit
 	maxTokens := operation_setting.GetMaxUserTokens()
 	count, err := model.CountUserTokens(c.GetInt("id"))
 	if err != nil {
@@ -197,7 +197,7 @@ func AddToken(c *gin.Context) {
 	if int(count) >= maxTokens {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("已达到最大令牌数量限制 (%d)", maxTokens),
+			"message": fmt.Sprintf("Maximum token count limit reached (%d)", maxTokens),
 		})
 		return
 	}

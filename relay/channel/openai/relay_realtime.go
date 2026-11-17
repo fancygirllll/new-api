@@ -138,7 +138,7 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 							errChan <- fmt.Errorf("error consume usage: %v", err)
 							return
 						}
-						// 本次计费完成，清除
+						// Billing for this round is complete; clear the accumulators.
 						usage = &dto.RealtimeUsage{}
 
 						localUsage = &dto.RealtimeUsage{}
@@ -159,7 +159,7 @@ func OpenaiRealtimeHandler(c *gin.Context, info *relaycommon.RelayInfo) (*types.
 							errChan <- fmt.Errorf("error consume usage: %v", err)
 							return
 						}
-						// 本次计费完成，清除
+						// Billing for this round is complete; clear the accumulators.
 						localUsage = &dto.RealtimeUsage{}
 						// print now usage
 					}

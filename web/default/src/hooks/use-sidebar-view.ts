@@ -57,9 +57,9 @@ export function useSidebarView(): ResolvedSidebarView {
     return configFilteredRoot
       .filter((group) => (group.id === 'admin' ? isAdmin : true))
       .map((group) => {
-        // 张力点 #3：distributorOnly 用精确匹配 role===ROLE.DISTRIBUTOR（非 requiredRole 阈值），
-        // 避免 admin(10)/root(100) 见到分销商入口点击 403 死链。
-        // requiredRole 保留 `>=` 阈值语义，两者正交组合。
+        // Tension point #3: distributorOnly requires an exact role===ROLE.DISTRIBUTOR match (not the requiredRole threshold),
+        // so admin(10)/root(100) never see a distributor entry that dead-ends in a 403.
+        // requiredRole keeps its `>=` threshold semantics; the two combine orthogonally.
         const items = group.items.filter(
           (item) =>
             (item.requiredRole === undefined || role >= item.requiredRole) &&

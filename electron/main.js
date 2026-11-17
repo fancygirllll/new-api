@@ -11,7 +11,7 @@ let serverErrorLogs = [];
 const PORT = 3000;
 const DEV_FRONTEND_PORT = 5173; // Vite dev server port
 
-// 保存日志到文件并打开
+// Save the error log to a file and open it
 function saveAndOpenErrorLog() {
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -19,36 +19,36 @@ function saveAndOpenErrorLog() {
     const logDir = app.getPath('logs');
     const logFilePath = path.join(logDir, logFileName);
     
-    // 确保日志目录存在
+    // Ensure the log directory exists
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
     
-    // 写入日志
-    const logContent = `TrustHarbor 崩溃日志
-生成时间: ${new Date().toLocaleString('zh-CN')}
-平台: ${process.platform}
-架构: ${process.arch}
-应用版本: ${app.getVersion()}
+    // Write the log file
+    const logContent = `TrustHarbor crash log
+Generated at: ${new Date().toLocaleString('en-US')}
+Platform: ${process.platform}
+Architecture: ${process.arch}
+App version: ${app.getVersion()}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-完整错误日志:
+Full error log:
 
 ${serverErrorLogs.join('\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-日志文件位置: ${logFilePath}
+Log file location: ${logFilePath}
 `;
     
     fs.writeFileSync(logFilePath, logContent, 'utf8');
     
-    // 打开日志文件
+    // Open the log file
     shell.openPath(logFilePath).then((error) => {
       if (error) {
         console.error('Failed to open log file:', error);
-        // 如果打开文件失败，至少显示文件位置
+        // If opening the file fails, at least reveal its location
         shell.showItemInFolder(logFilePath);
       }
     });
@@ -60,87 +60,87 @@ ${serverErrorLogs.join('\n')}
   }
 }
 
-// 分析错误日志，识别常见错误并提供解决方案
+// Analyze the error log, identify common failures, and provide solutions
 function analyzeError(errorLogs) {
   const allLogs = errorLogs.join('\n');
   
-  // 检测端口占用错误
+  // Detect port-in-use errors
   if (allLogs.includes('failed to start HTTP server') || 
       allLogs.includes('bind: address already in use') ||
       allLogs.includes('listen tcp') && allLogs.includes('bind: address already in use')) {
     return {
-      type: '端口被占用',
-      title: '端口 ' + PORT + ' 被占用',
-      message: '无法启动服务器，端口已被其他程序占用',
-      solution: `可能的解决方案：\n\n1. 关闭占用端口 ${PORT} 的其他程序\n2. 检查是否已经运行了另一个 TrustHarbor 实例\n3. 使用以下命令查找占用端口的进程：\n   Mac/Linux: lsof -i :${PORT}\n   Windows: netstat -ano | findstr :${PORT}\n4. 重启电脑以释放端口`
+      type: 'Port in use',
+      title: 'Port ' + PORT + ' is already in use',
+      message: 'Unable to start the server because the port is occupied by another program',
+      solution: `Possible solutions:\n\n1. Close the other program using port ${PORT}\n2. Check whether another TrustHarbor instance is already running\n3. Find the process using the port with:\n   Mac/Linux: lsof -i :${PORT}\n   Windows: netstat -ano | findstr :${PORT}\n4. Restart your computer to release the port`
     };
   }
   
-  // 检测数据库错误
+  // Detect database errors
   if (allLogs.includes('database is locked') || 
       allLogs.includes('unable to open database')) {
     return {
-      type: '数据文件被占用',
-      title: '无法访问数据文件',
-      message: '应用的数据文件正被其他程序占用',
-      solution: '可能的解决方案：\n\n1. 检查是否已经打开了另一个 TrustHarbor 窗口\n   - 查看任务栏/Dock 中是否有其他 TrustHarbor 图标\n   - 查看系统托盘（Windows）或菜单栏（Mac）中是否有 TrustHarbor 图标\n\n2. 如果刚刚关闭过应用，请等待 10 秒后再试\n\n3. 重启电脑以释放被占用的文件\n\n4. 如果问题持续，可以尝试：\n   - 退出所有 TrustHarbor 实例\n   - 删除数据目录中的临时文件（.db-shm 和 .db-wal）\n   - 重新启动应用' 
+      type: 'Data file in use',
+      title: 'Unable to access the data file',
+      message: 'The application data file is being used by another program',
+      solution: 'Possible solutions:\n\n1. Check whether another TrustHarbor window is already open\n   - Look for another TrustHarbor icon in the taskbar/Dock\n   - Look for a TrustHarbor icon in the system tray (Windows) or menu bar (Mac)\n\n2. If you just closed the app, wait 10 seconds and try again\n\n3. Restart your computer to release the locked file\n\n4. If the problem persists, try:\n   - Quit all TrustHarbor instances\n   - Delete the temporary files (.db-shm and .db-wal) in the data directory\n   - Restart the app'
     };
   }
   
-  // 检测权限错误
+  // Detect permission errors
   if (allLogs.includes('permission denied') || 
       allLogs.includes('access denied')) {
     return {
-      type: '权限错误',
-      title: '权限不足',
-      message: '程序没有足够的权限执行操作',
-      solution: '可能的解决方案：\n\n1. 以管理员/root权限运行程序\n2. 检查数据目录的读写权限\n3. 检查可执行文件的权限\n4. 在 Mac 上，检查安全性与隐私设置'
+      type: 'Permission error',
+      title: 'Insufficient permissions',
+      message: 'The program does not have enough permissions to perform the operation',
+      solution: 'Possible solutions:\n\n1. Run the program as administrator/root\n2. Check read/write permissions on the data directory\n3. Check the permissions of the executable\n4. On Mac, check the Security & Privacy settings'
     };
   }
   
-  // 检测网络错误
+  // Detect network errors
   if (allLogs.includes('network is unreachable') || 
       allLogs.includes('no such host') ||
       allLogs.includes('connection refused')) {
     return {
-      type: '网络错误',
-      title: '网络连接失败',
-      message: '无法建立网络连接',
-      solution: '可能的解决方案：\n\n1. 检查网络连接是否正常\n2. 检查防火墙设置\n3. 检查代理配置\n4. 确认目标服务器地址正确'
+      type: 'Network error',
+      title: 'Network connection failed',
+      message: 'Unable to establish a network connection',
+      solution: 'Possible solutions:\n\n1. Check whether the network connection is working\n2. Check the firewall settings\n3. Check the proxy configuration\n4. Confirm the target server address is correct'
     };
   }
   
-  // 检测配置文件错误
+  // Detect configuration errors
   if (allLogs.includes('invalid configuration') || 
       allLogs.includes('failed to parse config') ||
       allLogs.includes('yaml') || allLogs.includes('json') && allLogs.includes('parse')) {
     return {
-      type: '配置错误',
-      title: '配置文件错误',
-      message: '配置文件格式不正确或包含无效配置',
-      solution: '可能的解决方案：\n\n1. 检查配置文件格式是否正确\n2. 恢复默认配置\n3. 删除配置文件让程序重新生成\n4. 查看文档了解正确的配置格式'
+      type: 'Configuration error',
+      title: 'Configuration file error',
+      message: 'The configuration file is malformed or contains invalid settings',
+      solution: 'Possible solutions:\n\n1. Check whether the configuration file format is correct\n2. Restore the default configuration\n3. Delete the configuration file so the program regenerates it\n4. Consult the documentation for the correct configuration format'
     };
   }
   
-  // 检测内存不足
+  // Detect out-of-memory errors
   if (allLogs.includes('out of memory') || 
       allLogs.includes('cannot allocate memory')) {
     return {
-      type: '内存不足',
-      title: '系统内存不足',
-      message: '程序运行时内存不足',
-      solution: '可能的解决方案：\n\n1. 关闭其他占用内存的程序\n2. 增加系统可用内存\n3. 重启电脑释放内存\n4. 检查是否存在内存泄漏'
+      type: 'Out of memory',
+      title: 'System memory exhausted',
+      message: 'The program ran out of memory',
+      solution: 'Possible solutions:\n\n1. Close other memory-intensive programs\n2. Increase available system memory\n3. Restart your computer to free memory\n4. Check for memory leaks'
     };
   }
   
-  // 检测文件不存在错误
+  // Detect missing-file errors
   if (allLogs.includes('no such file or directory') || 
       allLogs.includes('cannot find the file')) {
     return {
-      type: '文件缺失',
-      title: '找不到必需的文件',
-      message: '缺少程序运行所需的文件',
-      solution: '可能的解决方案：\n\n1. 重新安装应用程序\n2. 检查安装目录是否完整\n3. 确保所有依赖文件都存在\n4. 检查文件路径是否正确'
+      type: 'Missing file',
+      title: 'Required file not found',
+      message: 'A file required to run the program is missing',
+      solution: 'Possible solutions:\n\n1. Reinstall the application\n2. Check whether the installation directory is complete\n3. Make sure all dependency files exist\n4. Check whether the file path is correct'
     };
   }
   
@@ -226,12 +226,12 @@ function startServer() {
     const userDataPath = app.getPath('userData');
     const dataDir = path.join(userDataPath, 'data');
     
-    // 设置环境变量供 preload.js 使用
+    // Expose the data directory to preload.js through an environment variable
     process.env.ELECTRON_DATA_DIR = dataDir;
     
     if (isDev) {
-      // 开发模式：假设开发者手动启动了 Go 后端和前端开发服务器
-      // 只需要等待前端开发服务器就绪
+      // Development mode: assume the developer started the Go backend and the
+      // frontend dev server manually; only wait for the frontend dev server.
       console.log('Development mode: skipping server startup');
       console.log('Please make sure you have started:');
       console.log('  1. Go backend: go run main.go (port 3000)');
@@ -254,7 +254,7 @@ function startServer() {
       return;
     }
 
-    // 生产模式：启动二进制服务器
+    // Production mode: start the bundled binary server
     const env = { ...process.env, PORT: PORT.toString() };
 
     if (!fs.existsSync(dataDir)) {
@@ -264,9 +264,9 @@ function startServer() {
     env.SQLITE_PATH = path.join(dataDir, 'new-api.db');
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📁 您的数据存储位置：');
+    console.log('📁 Your data is stored at:');
     console.log('   ' + dataDir);
-    console.log('   💡 备份提示：复制此目录即可备份所有数据');
+    console.log('   💡 Backup tip: copy this directory to back up all data');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     const binaryPath = getBinaryPath();
@@ -287,7 +287,7 @@ function startServer() {
       const errorMsg = data.toString();
       console.error(`Server Error: ${errorMsg}`);
       serverErrorLogs.push(errorMsg);
-      // 只保留最近的100条错误日志
+      // Keep only the most recent 100 error log entries
       if (serverErrorLogs.length > 100) {
         serverErrorLogs.shift();
       }
@@ -301,35 +301,35 @@ function startServer() {
     serverProcess.on('close', (code) => {
       console.log(`Server process exited with code ${code}`);
       
-      // 如果退出代码不是0，说明服务器异常退出
+      // A non-zero exit code means the server crashed
       if (code !== 0 && code !== null) {
         const errorDetails = serverErrorLogs.length > 0 
           ? serverErrorLogs.slice(-20).join('\n') 
-          : '没有捕获到错误日志';
+          : 'No error logs were captured';
         
-        // 分析错误类型
+        // Analyze the error type
         const knownError = analyzeError(serverErrorLogs);
         
         let dialogOptions;
         if (knownError) {
-          // 识别到已知错误，显示友好的错误信息和解决方案
+          // Known error: show a friendly message with solutions
           dialogOptions = {
             type: 'error',
             title: knownError.title,
             message: knownError.message,
-            detail: `${knownError.solution}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n退出代码: ${code}\n\n错误类型: ${knownError.type}\n\n最近的错误日志:\n${errorDetails}`,
-            buttons: ['退出应用', '查看完整日志'],
+            detail: `${knownError.solution}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\nExit code: ${code}\n\nError type: ${knownError.type}\n\nRecent error logs:\n${errorDetails}`,
+            buttons: ['Quit', 'View full log'],
             defaultId: 0,
             cancelId: 0
           };
         } else {
-          // 未识别的错误，显示通用错误信息
+          // Unknown error: show a generic error message
           dialogOptions = {
             type: 'error',
-            title: '服务器崩溃',
-            message: '服务器进程异常退出',
-            detail: `退出代码: ${code}\n\n最近的错误信息:\n${errorDetails}`,
-            buttons: ['退出应用', '查看完整日志'],
+            title: 'Server crashed',
+            message: 'The server process exited unexpectedly',
+            detail: `Exit code: ${code}\n\nRecent error output:\n${errorDetails}`,
+            buttons: ['Quit', 'View full log'],
             defaultId: 0,
             cancelId: 0
           };
@@ -337,36 +337,36 @@ function startServer() {
         
         dialog.showMessageBox(dialogOptions).then((result) => {
           if (result.response === 1) {
-            // 用户选择查看详情，保存并打开日志文件
+            // The user chose to view details: save and open the log file
             const logPath = saveAndOpenErrorLog();
             
-            // 显示确认对话框
+            // Show a confirmation dialog
             const confirmMessage = logPath 
-              ? `日志已保存到:\n${logPath}\n\n日志文件已在默认文本编辑器中打开。\n\n点击"退出"关闭应用程序。`
-              : '日志保存失败，但已在控制台输出。\n\n点击"退出"关闭应用程序。';
+              ? `Log saved to:\n${logPath}\n\nThe log file has been opened in your default text editor.\n\nClick "Quit" to close the application.`
+              : 'Failed to save the log, but it has been printed to the console.\n\nClick "Quit" to close the application.';
             
             dialog.showMessageBox({
               type: 'info',
-              title: '日志已保存',
+              title: 'Log saved',
               message: confirmMessage,
-              buttons: ['退出'],
+              buttons: ['Quit'],
               defaultId: 0
             }).then(() => {
               app.isQuitting = true;
               app.quit();
             });
             
-            // 同时在控制台输出
-            console.log('=== 完整错误日志 ===');
+            // Also print to the console
+            console.log('=== Full error log ===');
             console.log(serverErrorLogs.join('\n'));
           } else {
-            // 用户选择直接退出
+            // The user chose to quit immediately
             app.isQuitting = true;
             app.quit();
           }
         });
       } else {
-        // 正常退出（code为0或null），直接关闭窗口
+        // Normal exit (code is 0 or null): close the window directly
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.close();
         }
@@ -482,38 +482,38 @@ app.whenReady().then(async () => {
   } catch (err) {
     console.error('Failed to start application:', err);
     
-    // 分析启动失败的错误
+    // Analyze the startup failure
     const knownError = analyzeError(serverErrorLogs);
     
     if (knownError) {
       dialog.showMessageBox({
         type: 'error',
         title: knownError.title,
-        message: `启动失败: ${knownError.message}`,
-        detail: `${knownError.solution}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n错误信息: ${err.message}\n\n错误类型: ${knownError.type}`,
-        buttons: ['退出', '查看完整日志'],
+        message: `Startup failed: ${knownError.message}`,
+        detail: `${knownError.solution}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\nError: ${err.message}\n\nError type: ${knownError.type}`,
+        buttons: ['Quit', 'View full log'],
         defaultId: 0,
         cancelId: 0
       }).then((result) => {
         if (result.response === 1) {
-          // 用户选择查看日志
+          // The user chose to view the log
           const logPath = saveAndOpenErrorLog();
           
           const confirmMessage = logPath 
-            ? `日志已保存到:\n${logPath}\n\n日志文件已在默认文本编辑器中打开。\n\n点击"退出"关闭应用程序。`
-            : '日志保存失败，但已在控制台输出。\n\n点击"退出"关闭应用程序。';
+            ? `Log saved to:\n${logPath}\n\nThe log file has been opened in your default text editor.\n\nClick "Quit" to close the application.`
+            : 'Failed to save the log, but it has been printed to the console.\n\nClick "Quit" to close the application.';
           
           dialog.showMessageBox({
             type: 'info',
-            title: '日志已保存',
+            title: 'Log saved',
             message: confirmMessage,
-            buttons: ['退出'],
+            buttons: ['Quit'],
             defaultId: 0
           }).then(() => {
             app.quit();
           });
           
-          console.log('=== 完整错误日志 ===');
+          console.log('=== Full error log ===');
           console.log(serverErrorLogs.join('\n'));
         } else {
           app.quit();
@@ -522,32 +522,32 @@ app.whenReady().then(async () => {
     } else {
       dialog.showMessageBox({
         type: 'error',
-        title: '启动失败',
-        message: '无法启动服务器',
-        detail: `错误信息: ${err.message}\n\n请检查日志获取更多信息。`,
-        buttons: ['退出', '查看完整日志'],
+        title: 'Startup failed',
+        message: 'Unable to start the server',
+        detail: `Error: ${err.message}\n\nPlease check the logs for more information.`,
+        buttons: ['Quit', 'View full log'],
         defaultId: 0,
         cancelId: 0
       }).then((result) => {
         if (result.response === 1) {
-          // 用户选择查看日志
+          // The user chose to view the log
           const logPath = saveAndOpenErrorLog();
           
           const confirmMessage = logPath 
-            ? `日志已保存到:\n${logPath}\n\n日志文件已在默认文本编辑器中打开。\n\n点击"退出"关闭应用程序。`
-            : '日志保存失败，但已在控制台输出。\n\n点击"退出"关闭应用程序。';
+            ? `Log saved to:\n${logPath}\n\nThe log file has been opened in your default text editor.\n\nClick "Quit" to close the application.`
+            : 'Failed to save the log, but it has been printed to the console.\n\nClick "Quit" to close the application.';
           
           dialog.showMessageBox({
             type: 'info',
-            title: '日志已保存',
+            title: 'Log saved',
             message: confirmMessage,
-            buttons: ['退出'],
+            buttons: ['Quit'],
             defaultId: 0
           }).then(() => {
             app.quit();
           });
           
-          console.log('=== 完整错误日志 ===');
+          console.log('=== Full error log ===');
           console.log(serverErrorLogs.join('\n'));
         } else {
           app.quit();

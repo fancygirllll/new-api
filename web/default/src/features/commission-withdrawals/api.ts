@@ -26,12 +26,12 @@ import {
 } from '@/features/commission-statements/api'
 
 /**
- * 提现单 API 层（契约 01-CONTRACT.md 附录 E2 冻结形状 A15-A21，v1.4）。
- * 金额无独立字段（D-08）：settle_amount_cents 经后端 JOIN 实时取账单值，
- * 展示层复用 formatCents（契约 §3.0 禁 float 运算）。
+ * Withdrawal API layer (contract 01-CONTRACT.md appendix E2 frozen shapes A15-A21, v1.4).
+ * There is no separate amount field (D-08): settle_amount_cents is taken live from the statement via a backend JOIN,
+ * and the display layer reuses formatCents (contract §3.0 prohibits float arithmetic).
  */
 
-/** 提现单五态（附录 E1 冻结；Q1=B approved 独立态，Q2=B 驳回仅 reviewing 可发起） */
+/** Five withdrawal states (appendix E1 frozen; Q1=B approved is a separate state, Q2=B reject can only be initiated from reviewing) */
 export type WithdrawalStatus =
   | 'pending'
   | 'reviewing'
@@ -39,10 +39,10 @@ export type WithdrawalStatus =
   | 'paid'
   | 'rejected'
 
-/** 视角：admin=审核工作台（A17-A21），self=分销商（A15/A16） */
+/** View: admin=review workbench (A17-A21), self=distributor (A15/A16) */
 export type WithdrawalScope = 'admin' | 'self'
 
-/** 提现单（A16/A17 WithdrawalDetail 扁平 snake_case，附录 E2 冻结字段逐字对齐） */
+/** Withdrawal (A16/A17 WithdrawalDetail flat snake_case, appendix E2 frozen fields aligned verbatim) */
 export interface Withdrawal {
   id: number
   withdrawal_no: string
@@ -57,16 +57,16 @@ export interface Withdrawal {
   approved_at: number
   paid_at: number
   rejected_at: number
-  /** admin 列表 JOIN users 冗余（A17）；self 响应可能缺省 */
+  /** admin list JOINs users redundantly (A17); may be absent in the self response */
   username?: string
-  /** JOIN 账单冗余（D-08 实时取值） */
+  /** JOINed statement redundancy (D-08 live value) */
   period: string
   settle_amount_cents: number
 }
 
 export type WithdrawalPageInfo<T> = StatementPageInfo<T>
 
-/** 五态 → i18n key（动态标签走 t(key) 渲染，常量映射不透传服务端字符串 T-05-02-02） */
+/** Five states → i18n key (dynamic labels render via t(key); the constant mapping never passes through server strings, T-05-02-02) */
 export const WITHDRAWAL_STATUS_LABEL_KEYS: Record<WithdrawalStatus, string> = {
   pending: 'Withdrawal Pending',
   reviewing: 'Withdrawal Reviewing',
@@ -75,7 +75,7 @@ export const WITHDRAWAL_STATUS_LABEL_KEYS: Record<WithdrawalStatus, string> = {
   rejected: 'Withdrawal Rejected',
 }
 
-/** 五态 → 徽标变体（状态视觉区分；rejected 醒目红） */
+/** Five states → badge variant (visual state distinction; rejected stands out in red) */
 export const WITHDRAWAL_STATUS_BADGE_VARIANT: Record<
   WithdrawalStatus,
   'default' | 'secondary' | 'outline' | 'destructive'
@@ -87,7 +87,7 @@ export const WITHDRAWAL_STATUS_BADGE_VARIANT: Record<
   rejected: 'destructive',
 }
 
-/** 时间线五列（附录 E1；空值 0 不展示） */
+/** Five timeline columns (appendix E1; a value of 0 is not displayed) */
 export const WITHDRAWAL_TIMELINE_FIELDS: Array<{
   key: keyof Withdrawal
   labelKey: string
@@ -99,7 +99,7 @@ export const WITHDRAWAL_TIMELINE_FIELDS: Array<{
   { key: 'rejected_at', labelKey: 'Rejected At' },
 ]
 
-/** scope → 提现单列表基路径（admin=A17；self=A16 服务端强制 WHERE distributor_id=self） */
+/** scope → withdrawal list base path (admin=A17; self=A16, the server forces WHERE distributor_id=self) */
 export function withdrawalsBasePath(scope: WithdrawalScope): string {
   return scope === 'self'
     ? '/api/commission/withdrawals/self'
@@ -109,12 +109,12 @@ export function withdrawalsBasePath(scope: WithdrawalScope): string {
 export interface WithdrawalListParams {
   page?: number
   pageSize?: number
-  /** 仅 admin 路由支持（A17）；self 服务端忽略任何客户端传入 */
+  /** Supported only on the admin route (A17); self ignores anything passed by the client */
   distributorId?: number
   status?: string
 }
 
-/** A16/A17 提现单列表（distributor_id/status 过滤可选，排序 id DESC 新申请在前） */
+/** A16/A17 withdrawal list (optional distributor_id/status filters, sorted id DESC with the newest application first) */
 export async function fetchWithdrawals(
   scope: WithdrawalScope,
   params: WithdrawalListParams = {}
@@ -130,7 +130,7 @@ export async function fetchWithdrawals(
   return res.data
 }
 
-/** A15 发起提现申请（按单全额 D-08：请求零金额输入面；响应 {success} 冻结形状） */
+/** A15 start a withdrawal application (full amount per statement, D-08: no amount input in the request; response {success} frozen shape) */
 export async function applyWithdraw(
   statementId: number
 ): Promise<ApiEnvelope<null>> {
@@ -140,7 +140,7 @@ export async function applyWithdraw(
   return res.data
 }
 
-/** A18 受理（pending→reviewing，账单零操作） */
+/** A18 accept (pending→reviewing, no statement operation) */
 export async function acceptWithdrawal(
   id: number
 ): Promise<ApiEnvelope<null>> {
@@ -148,7 +148,7 @@ export async function acceptWithdrawal(
   return res.data
 }
 
-/** A19 驳回（reviewing→rejected，reason 必填；同事务账单回退 payable D-05） */
+/** A19 reject (reviewing→rejected, reason required; the same transaction rolls the statement back to payable, D-05) */
 export async function rejectWithdrawal(
   id: number,
   reason: string
@@ -159,7 +159,7 @@ export async function rejectWithdrawal(
   return res.data
 }
 
-/** A20 批准（reviewing→approved，账单保持 withdrawing，Q1=B） */
+/** A20 approve (reviewing→approved, the statement stays withdrawing, Q1=B) */
 export async function approveWithdrawal(
   id: number
 ): Promise<ApiEnvelope<null>> {
@@ -167,7 +167,7 @@ export async function approveWithdrawal(
   return res.data
 }
 
-/** A21 打款登记（approved→paid，voucher_no 必填；同事务账单 settled D-05） */
+/** A21 mark paid (approved→paid, voucher_no required; the same transaction settles the statement, D-05) */
 export async function markWithdrawalPaid(
   id: number,
   voucherNo: string
@@ -178,5 +178,5 @@ export async function markWithdrawalPaid(
   return res.data
 }
 
-/** 金额/时间展示复用对账单域唯一入口（禁复制派生） */
+/** Amount/time formatting reuses the single entry from the statement domain (no copy-paste derivation) */
 export { formatCents, formatUnixTime }

@@ -21,8 +21,8 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { DISTRIBUTOR_DEFAULT_SECTION } from '@/features/distributor-console/section-registry'
 
 /**
- * /distributor 入口纯 redirect（D-01/D-02，母本 commission-withdrawals/index.tsx）。
- * 精确守卫已整体迁往 $section.tsx beforeLoad——redirect 后必经其守卫，此处零身份判断。
+ * /distributor entry is a pure redirect (D-01/D-02, modeled on commission-withdrawals/index.tsx).
+ * The exact guard has moved entirely to $section.tsx beforeLoad--the redirect always passes through it, so there is zero identity check here.
  */
 export const Route = createFileRoute('/_authenticated/distributor/')({
   beforeLoad: () => {

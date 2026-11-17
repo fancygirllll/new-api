@@ -38,7 +38,7 @@ func MidjourneyErrorWithStatusCodeWrapper(code int, desc string, statusCode int)
 //	if !strings.HasPrefix(lowerText, "get file base64 from url") && !strings.HasPrefix(lowerText, "mime type is not supported") {
 //		if strings.Contains(lowerText, "post") || strings.Contains(lowerText, "dial") || strings.Contains(lowerText, "http") {
 //			common.SysLog(fmt.Sprintf("error: %s", text))
-//			text = "请求上游地址失败"
+//			text = "Failed to request upstream address"
 //		}
 //	}
 //	openAIError := dto.OpenAIError{
@@ -64,7 +64,7 @@ func ClaudeErrorWrapper(err error, code string, statusCode int) *dto.ClaudeError
 	if !strings.HasPrefix(lowerText, "get file base64 from url") {
 		if strings.Contains(lowerText, "post") || strings.Contains(lowerText, "dial") || strings.Contains(lowerText, "http") {
 			common.SysLog(fmt.Sprintf("error: %s", text))
-			text = "请求上游地址失败"
+			text = "Failed to request upstream address"
 		}
 	}
 	claudeError := types.ClaudeError{
@@ -195,10 +195,10 @@ func TaskErrorWrapper(err error, code string, statusCode int) *dto.TaskError {
 	lowerText := strings.ToLower(text)
 	if strings.Contains(lowerText, "post") || strings.Contains(lowerText, "dial") || strings.Contains(lowerText, "http") {
 		common.SysLog(fmt.Sprintf("error: %s", text))
-		//text = "请求上游地址失败"
+		//text = "Failed to request upstream address"
 		text = common.MaskSensitiveInfo(text)
 	}
-	//避免暴露内部错误
+	// Avoid exposing internal errors
 	taskError := &dto.TaskError{
 		Code:       code,
 		Message:    text,
@@ -209,7 +209,7 @@ func TaskErrorWrapper(err error, code string, statusCode int) *dto.TaskError {
 	return taskError
 }
 
-// TaskErrorFromAPIError 将 PreConsumeBilling 返回的 NewAPIError 转换为 TaskError。
+// TaskErrorFromAPIError converts the NewAPIError returned by PreConsumeBilling into a TaskError.
 func TaskErrorFromAPIError(apiErr *types.NewAPIError) *dto.TaskError {
 	if apiErr == nil {
 		return nil

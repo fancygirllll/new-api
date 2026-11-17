@@ -43,7 +43,7 @@ export function parseHttpStatusCodeRules(
     }
   }
 
-  const sanitized = raw.replace(/[，]/g, ',')
+  const sanitized = raw.replaceAll('\uFF0C', ',')
   const segments = sanitized
     .split(',')
     .map((s) => s.trim())

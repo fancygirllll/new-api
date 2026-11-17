@@ -39,12 +39,12 @@ func FlushWriter(c *gin.Context) (err error) {
 }
 
 func SetEventStreamHeaders(c *gin.Context) {
-	// 检查是否已经设置过头部
+	// Check whether the headers have already been set.
 	if _, exists := c.Get("event_stream_headers_set"); exists {
 		return
 	}
 
-	// 设置标志，表示头部已经设置过
+	// Set a flag indicating that the headers have been set.
 	c.Set("event_stream_headers_set", true)
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")

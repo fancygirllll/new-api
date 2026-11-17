@@ -405,8 +405,8 @@ export function getResponseTimeConfig(timeMs: number) {
 /**
  * Format a Unix timestamp (seconds) as a compact, locale-aware relative time.
  * Uses `Intl.RelativeTimeFormat` with the `narrow` style so the label stays
- * short inside table cells, e.g. "4h ago" / "42m ago" (en) or "4 小时前" (zh),
- * instead of the verbose "4 hours ago".
+ * short inside table cells, e.g. "4h ago" / "42m ago" (en) or localized equivalents
+ * in other locales, instead of the verbose "4 hours ago".
  */
 export function formatRelativeTime(
   timestamp: number,

@@ -2,23 +2,26 @@ package common
 
 import "github.com/gin-gonic/gin"
 
-// BillingSettler 抽象计费会话的生命周期操作。
-// 由 service.BillingSession 实现，存储在 RelayInfo 上以避免循环引用。
+// BillingSettler abstracts the lifecycle operations of a billing session.
+// It is implemented by service.BillingSession and stored on RelayInfo to avoid import cycles.
 type BillingSettler interface {
-	// Settle 根据实际消耗额度进行结算，计算 delta = actualQuota - preConsumedQuota，
-	// 同时调整资金来源（钱包/订阅）和令牌额度。
+	// Settle settles based on the actual quota consumed, computing
+	// delta = actualQuota - preConsumedQuota, and adjusts both the funding source
+	// (wallet/subscription) and the token quota.
 	Settle(actualQuota int) error
 
-	// Refund 退还所有预扣费额度（资金来源 + 令牌），幂等安全。
-	// 通过 gopool 异步执行。如果已经结算或退款则不做任何操作。
+	// Refund refunds all pre-consumed quota (funding source + token) and is idempotent.
+	// It runs asynchronously through gopool. If already settled or refunded, it does nothing.
 	Refund(c *gin.Context)
 
-	// NeedsRefund 返回会话是否存在需要退还的预扣状态（未结算且未退款）。
+	// NeedsRefund reports whether the session still has a pre-consumed state that needs
+	// refunding (neither settled nor refunded).
 	NeedsRefund() bool
 
-	// GetPreConsumedQuota 返回实际预扣的额度值（信任用户可能为 0）。
+	// GetPreConsumedQuota returns the actual pre-consumed quota (may be 0 for trusted users).
 	GetPreConsumedQuota() int
 
-	// Reserve 将预扣额度补到目标值；若目标值不高于当前预扣额度则不做任何事。
+	// Reserve tops the pre-consumed quota up to the target value; if the target is not
+	// higher than the current pre-consumed quota, it does nothing.
 	Reserve(targetQuota int) error
 }

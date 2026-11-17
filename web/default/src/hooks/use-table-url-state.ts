@@ -149,7 +149,7 @@ export function useTableUrlState(
   const [columnFilters, setColumnFilters] =
     useState<ColumnFiltersState>(initialColumnFilters)
 
-  // URL 为单一数据源：仅当 search（URL）变化时同步，避免依赖 initialColumnFilters 造成死循环（config 常为内联引用）
+  // URL is the single source of truth: sync only when search (URL) changes to avoid an infinite loop from depending on initialColumnFilters (config is often an inline reference)
   useEffect(() => {
     setColumnFilters(initialColumnFilters)
     // eslint-disable-next-line react-hooks/exhaustive-deps

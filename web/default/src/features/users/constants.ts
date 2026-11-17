@@ -68,7 +68,7 @@ export const getUserStatusOptions = (t: (key: string) => string) => [
 
 export const USER_ROLE = {
   USER: 1,
-  DISTRIBUTOR: 5, // 分销商（契约 §2.2）
+  DISTRIBUTOR: 5, // Distributor (contract §2.2)
   ADMIN: 10,
   ROOT: 100,
 } as const

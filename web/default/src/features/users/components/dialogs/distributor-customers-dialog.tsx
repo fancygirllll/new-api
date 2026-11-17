@@ -41,16 +41,16 @@ const PAGE_SIZE = 10
 
 interface DistributorCustomersDialogProps {
   open: boolean
-  /** 目标分销商用户 ID（B7 path :id） */
+  /** Target distributor user ID (B7 path :id) */
   distributorId: number | null
   distributorUsername: string
   onOpenChange: (open: boolean) => void
 }
 
 /**
- * G-1 客户列表弹窗（B7 GET /api/attribution/distributor/:id/customers，契约附录 G）。
- * 行形状与 B4 distributorCustomerItem 逐字一致；金额 cents 直用 formatCents 唯一换算。
- * 前端零业务校验：归属关系由服务端 inviter_id 过滤保证。
+ * G-1 Customer list dialog (B7 GET /api/attribution/distributor/:id/customers, contract appendix G).
+ * Row shape matches B4 distributorCustomerItem verbatim; cents amounts use formatCents as the single conversion.
+ * No frontend business validation: the server's inviter_id filter guarantees the attribution relationship.
  */
 export function DistributorCustomersDialog({
   open,
@@ -63,7 +63,7 @@ export function DistributorCustomersDialog({
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
-  // 请求序号守卫：仅最新一次请求允许写回状态（rate-history-sheet 同款）
+  // Request sequence guard: only the latest request may write back state (same as rate-history-sheet)
   const reqSeq = useRef(0)
 
   const load = useCallback(async () => {
@@ -84,7 +84,7 @@ export function DistributorCustomersDialog({
     }
   }, [distributorId, page])
 
-  // 关闭或切换目标分销商时重置分页与旧数据（关闭即重置语义）
+  // Reset pagination and stale data when closing or switching the target distributor (closing implies reset)
   useEffect(() => {
     setPage(1)
     setRows([])

@@ -14,8 +14,8 @@ const (
 	BillingSourceSubscription = "subscription"
 )
 
-// PreConsumeBilling 根据用户计费偏好创建 BillingSession 并执行预扣费。
-// 会话存储在 relayInfo.Billing 上，供后续 Settle / Refund 使用。
+// PreConsumeBilling creates a BillingSession per the user's billing preference and performs pre-consumption.
+// The session is stored on relayInfo.Billing for later Settle / Refund.
 func PreConsumeBilling(c *gin.Context, preConsumedQuota int, relayInfo *relaycommon.RelayInfo) *types.NewAPIError {
 	session, apiErr := NewBillingSession(c, relayInfo, preConsumedQuota)
 	if apiErr != nil {
@@ -26,30 +26,30 @@ func PreConsumeBilling(c *gin.Context, preConsumedQuota int, relayInfo *relaycom
 }
 
 // ---------------------------------------------------------------------------
-// SettleBilling — 后结算辅助函数
+// SettleBilling - post-settlement helper
 // ---------------------------------------------------------------------------
 
-// SettleBilling 执行计费结算。如果 RelayInfo 上有 BillingSession 则通过 session 结算，
-// 否则回退到旧的 PostConsumeQuota 路径（兼容按次计费等场景）。
+// SettleBilling performs billing settlement. If RelayInfo has a BillingSession, settle through the session;
+// otherwise fall back to the legacy PostConsumeQuota path (for per-call billing, etc.).
 func SettleBilling(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, actualQuota int) error {
 	if relayInfo.Billing != nil {
 		preConsumed := relayInfo.Billing.GetPreConsumedQuota()
 		delta := actualQuota - preConsumed
 
 		if delta > 0 {
-			logger.LogInfo(ctx, fmt.Sprintf("预扣费后补扣费：%s（实际消耗：%s，预扣费：%s）",
+			logger.LogInfo(ctx, fmt.Sprintf("Post-charge after pre-consumption: %s (actual consumption: %s, pre-consumed: %s)",
 				logger.FormatQuota(delta),
 				logger.FormatQuota(actualQuota),
 				logger.FormatQuota(preConsumed),
 			))
 		} else if delta < 0 {
-			logger.LogInfo(ctx, fmt.Sprintf("预扣费后返还扣费：%s（实际消耗：%s，预扣费：%s）",
+			logger.LogInfo(ctx, fmt.Sprintf("Refund after pre-consumption: %s (actual consumption: %s, pre-consumed: %s)",
 				logger.FormatQuota(-delta),
 				logger.FormatQuota(actualQuota),
 				logger.FormatQuota(preConsumed),
 			))
 		} else {
-			logger.LogInfo(ctx, fmt.Sprintf("预扣费与实际消耗一致，无需调整：%s（按次计费）",
+			logger.LogInfo(ctx, fmt.Sprintf("Pre-consumed amount matches actual consumption, no adjustment needed: %s (per-call billing)",
 				logger.FormatQuota(actualQuota),
 			))
 		}
@@ -58,7 +58,7 @@ func SettleBilling(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, actualQuo
 			return err
 		}
 
-		// 发送额度通知（订阅计费使用订阅剩余额度）
+		// Send quota notification (subscription billing uses the subscription's remaining quota)
 		if actualQuota != 0 {
 			if relayInfo.BillingSource == BillingSourceSubscription {
 				checkAndSendSubscriptionQuotaNotify(relayInfo)
@@ -69,7 +69,7 @@ func SettleBilling(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, actualQuo
 		return nil
 	}
 
-	// 回退：无 BillingSession 时使用旧路径
+	// Fallback: use the legacy path when there is no BillingSession
 	quotaDelta := actualQuota - relayInfo.FinalPreConsumedQuota
 	if quotaDelta != 0 {
 		return PostConsumeQuota(relayInfo, quotaDelta, relayInfo.FinalPreConsumedQuota, true)

@@ -31,7 +31,7 @@ func InitOptionMap() {
 	common.OptionMapRWMutex.Lock()
 	common.OptionMap = make(map[string]string)
 
-	// 添加原有的系统配置
+	// Add the existing system options
 	common.OptionMap["FileUploadPermission"] = strconv.Itoa(common.FileUploadPermission)
 	common.OptionMap["FileDownloadPermission"] = strconv.Itoa(common.FileDownloadPermission)
 	common.OptionMap["ImageUploadPermission"] = strconv.Itoa(common.ImageUploadPermission)
@@ -176,13 +176,13 @@ func InitOptionMap() {
 	common.OptionMap["AutomaticRetryStatusCodes"] = operation_setting.AutomaticRetryStatusCodesToString()
 	common.OptionMap["ExposeRatioEnabled"] = strconv.FormatBool(ratio_setting.IsExposeRatioEnabled())
 
-	// Phase 2 分销商佣金与归属设置键（契约 01-CONTRACT.md §2.4 + §3.4 冻结，Pattern 4 热更新三件套）
+	// Phase 2 distributor commission and attribution option keys (contract 01-CONTRACT.md §2.4 + §3.4 frozen, Pattern 4 hot-update trio)
 	common.OptionMap["CommissionEnabled"] = strconv.FormatBool(common.CommissionEnabled)
 	common.OptionMap["CommissionPayoutDay"] = strconv.Itoa(common.CommissionPayoutDay)
 	common.OptionMap["AffRebindWindowMode"] = common.AffRebindWindowMode
 	common.OptionMap["AffRebindWindowDays"] = strconv.Itoa(common.AffRebindWindowDays)
 
-	// 自动添加所有注册的模型配置
+	// Automatically add all registered model options
 	modelConfigs := config.GlobalConfig.ExportAllConfigs()
 	for k, v := range modelConfigs {
 		common.OptionMap[k] = v
@@ -264,12 +264,12 @@ func updateOptionMap(key string, value string) (err error) {
 	defer common.OptionMapRWMutex.Unlock()
 	common.OptionMap[key] = value
 
-	// 检查是否是模型配置 - 使用更规范的方式处理
+	// Check whether this is a model option - handled in a more standardized way
 	if handleConfigUpdate(key, value) {
-		return nil // 已由配置系统处理
+		return nil // Already handled by the config system
 	}
 
-	// 处理传统配置项...
+	// Handle legacy options...
 	if strings.HasSuffix(key, "Permission") {
 		intValue, _ := strconv.Atoi(value)
 		switch key {
@@ -315,7 +315,7 @@ func updateOptionMap(key string, value string) (err error) {
 		case "LogConsumeEnabled":
 			common.LogConsumeEnabled = boolValue
 		case "DisplayInCurrencyEnabled":
-			// 兼容旧字段：同步到新配置 general_setting.quota_display_type（运行时生效）
+			// Legacy field compatibility: sync to the new general_setting.quota_display_type option (effective at runtime)
 			// true -> USD, false -> TOKENS
 			newVal := "USD"
 			if !boolValue {
@@ -580,7 +580,7 @@ func updateOptionMap(key string, value string) (err error) {
 		// WaffoPayMethods is read directly from OptionMap via setting.GetWaffoPayMethods().
 		// The value is already stored in OptionMap at the top of this function (line: common.OptionMap[key] = value).
 		// No additional in-memory variable to update.
-	// Phase 2 分销商佣金与归属设置键（契约 01-CONTRACT.md §2.4 + §3.4 冻结，Pattern 4 热更新 case）
+	// Phase 2 distributor commission and attribution option keys (contract 01-CONTRACT.md §2.4 + §3.4 frozen, Pattern 4 hot-update case)
 	case "CommissionPayoutDay":
 		intValue, _ := strconv.Atoi(value)
 		common.CommissionPayoutDay = intValue
@@ -593,29 +593,29 @@ func updateOptionMap(key string, value string) (err error) {
 	return err
 }
 
-// handleConfigUpdate 处理分层配置更新，返回是否已处理
+// handleConfigUpdate handles layered config updates and reports whether it was handled
 func handleConfigUpdate(key, value string) bool {
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) != 2 {
-		return false // 不是分层配置
+		return false // Not a layered option
 	}
 
 	configName := parts[0]
 	configKey := parts[1]
 
-	// 获取配置对象
+	// Get the config object
 	cfg := config.GlobalConfig.Get(configName)
 	if cfg == nil {
-		return false // 未注册的配置
+		return false // Unregistered option
 	}
 
-	// 更新配置
+	// Update the config
 	configMap := map[string]string{
 		configKey: value,
 	}
 	config.UpdateConfigFromMap(cfg, configMap)
 
-	// 特定配置的后处理
+	// Post-processing for specific options
 	if configName == "performance_setting" {
 		performance_setting.UpdateAndSync()
 	} else if configName == "tool_price_setting" {
@@ -627,5 +627,5 @@ func handleConfigUpdate(key, value string) bool {
 		system_setting.UpdateAndSyncTheme()
 	}
 
-	return true // 已处理
+	return true // Handled
 }

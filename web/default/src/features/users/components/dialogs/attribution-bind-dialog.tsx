@@ -28,7 +28,7 @@ import { adminBindAttribution } from '../../api'
 
 interface AttributionBindDialogProps {
   open: boolean
-  /** 目标客户（B2 user_id，对任意用户可用） */
+  /** Target user (B2 user_id; works for any user) */
   userId: number | null
   username: string
   onOpenChange: (open: boolean) => void
@@ -36,10 +36,10 @@ interface AttributionBindDialogProps {
 }
 
 /**
- * G-2 指定归属弹窗（B2 POST /api/attribution/bind，CUST-04 管理员手动改绑）。
- * 分销商 ID + reason 必填（前端仅空值拦截）；服务端校验链（F5 无条件覆盖 /
- * distributor role=5 精确匹配 / reason 审计）是唯一业务防线，
- * 失败信封 message 原样回显、零改写；成功后刷新列表。
+ * G-2 Set-attribution dialog (B2 POST /api/attribution/bind, CUST-04 admin manual rebind).
+ * Distributor ID + reason required (frontend only blocks empty values); the server validation chain (F5 unconditional overwrite /
+ * exact distributor role=5 match / reason audit) is the only business defense;
+ * the failure envelope message is echoed verbatim with no rewriting; the list refreshes on success.
  */
 export function AttributionBindDialog({
   open,

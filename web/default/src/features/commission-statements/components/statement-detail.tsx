@@ -17,11 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * 对账单共享视图组件（契约附录 D4）
- * Phase 4：管理端只读入口（scope="admin" → A5 详情 + A6 明细，全分销商视角）
- * Phase 6：分销商控制台复用（scope="self" → A11 明细 /api/commission/statements/self/:id/items，
- *          账单本体由 A10 列表行数据直接传入——契约无 self 详情端点，adjustments 区块仅 admin 展示）
- * 复用方式：传 scope prop 切换明细 API 基路径，禁止复制本文件派生第二份实现
+ * Shared statement view component (contract appendix D4)
+ * Phase 4: admin read-only entry (scope="admin" → A5 detail + A6 items, all-distributor view)
+ * Phase 6: reused by the distributor console (scope="self" → A11 items /api/commission/statements/self/:id/items,
+ *          the statement body is passed directly from A10 list rows--the contract has no self detail endpoint, so the adjustments block is admin-only)
+ * Reuse pattern: pass the scope prop to switch the items API base path; do not copy this file to derive a second implementation
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -53,14 +53,14 @@ const ITEM_PAGE_SIZE = 10
 
 interface StatementDetailProps {
   scope: StatementScope
-  /** 账单本体（来自列表行数据；self 场景同样适用，Phase 6 复用点） */
+  /** Statement body (from list row data; also applies to the self case, a Phase 6 reuse point) */
   statement: CommissionStatement
   onClose?: () => void
 }
 
 /**
- * 账单详情（A5/A6）：本体字段 + adjustments 时间线（仅 admin）+ 充值明细分页表
- * （单号/支付方式/充值金额/佣金金额/客户/比例/到账时间）。最小只读，无调账操作（A7/A8 UI 不在本期）。
+ * Statement detail (A5/A6): body fields + adjustments timeline (admin only) + paginated topup items
+ * (order no./payment method/topup amount/commission amount/customer/rate/completed time). Minimal read-only, no adjustment actions (A7/A8 UI is not in this phase).
  */
 export function StatementDetail({ scope, statement, onClose }: StatementDetailProps) {
   const { t } = useTranslation()
@@ -70,8 +70,8 @@ export function StatementDetail({ scope, statement, onClose }: StatementDetailPr
   const [itemsPage, setItemsPage] = useState(1)
   const [loading, setLoading] = useState(false)
 
-  // 切换账单目标（statement.id 变化）时重置分页与旧数据：本组件为非模态内联面板，
-  // 父级直接换 statement 复用同一实例，不重置会把 A 账单的旧页码/明细/调整单错挂到 B 账单标题下
+  // Reset pagination and stale data when switching the target statement (statement.id changes): this component is a non-modal inline panel,
+  // and the parent swaps statement while reusing the same instance; without a reset, statement A's old page/items/adjustments would be attached under statement B's title
   useEffect(() => {
     setItemsPage(1)
     setItems([])
@@ -79,7 +79,7 @@ export function StatementDetail({ scope, statement, onClose }: StatementDetailPr
     setAdjustments([])
   }, [statement.id])
 
-  // adjustments 仅 admin 可取（A5 AdminAuth）；self 契约无对应端点，保持空数组
+  // adjustments are fetchable by admin only (A5 AdminAuth); the self contract has no corresponding endpoint, so keep an empty array
   useEffect(() => {
     if (scope !== 'admin') return
     let cancelled = false
@@ -163,7 +163,7 @@ export function StatementDetail({ scope, statement, onClose }: StatementDetailPr
         </div>
       </div>
 
-      {/* adjustments 时间线（admin 视角；A8 调整单由 04-03 API 产出） */}
+      {/* adjustments timeline (admin view; A8 adjustment entries produced by the 04-03 API) */}
       {scope === 'admin' && (
         <div className='flex flex-col gap-1'>
           <span className='text-sm font-medium'>{t('Adjustments')}</span>
@@ -190,7 +190,7 @@ export function StatementDetail({ scope, statement, onClose }: StatementDetailPr
         </div>
       )}
 
-      {/* 充值明细分页表（A6/A11，含客户 username 冗余） */}
+      {/* Paginated topup items table (A6/A11, includes the redundant customer username) */}
       <div className='flex flex-col gap-2'>
         <span className='text-sm font-medium'>{t('Statement Items')}</span>
         <Table>
@@ -220,7 +220,7 @@ export function StatementDetail({ scope, statement, onClose }: StatementDetailPr
                   <TableCell>{formatCents(item.topup_money_cents)}</TableCell>
                   <TableCell>{formatCents(item.commission_cents)}</TableCell>
                   <TableCell>{item.username || item.customer_id}</TableCell>
-                  {/* 比例列（SC-7）：双 scope 均显示零分支；无关联流水为 0 时展示占位符；换算走唯一函数禁内联 */}
+                  {/* Rate column (SC-7): both scopes display it with zero branching; show a placeholder when there is no linked flow (value 0); conversion goes through the single function, never inline */}
                   <TableCell>
                     {item.rate_bp ? rateBpToPercent(item.rate_bp) : '-'}
                   </TableCell>

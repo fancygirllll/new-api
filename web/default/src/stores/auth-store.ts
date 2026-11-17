@@ -51,8 +51,8 @@ export interface AuthUser {
   stripe_customer?: string
   sidebar_modules?: string
   permissions?: UserPermissions
-  // M2（契约 §4.1 M2 + ATTR-05）：归属信息字段，前端据此显示/隐藏补绑入口。
-  // rebind_available = (inviter_id == 0) && 窗口校验通过——服务端计算，前端只读。
+  // M2 (contract §4.1 M2 + ATTR-05): attribution fields; the frontend uses these to show/hide the rebind entry.
+  // rebind_available = (inviter_id == 0) && window check passed--computed server-side, read-only on the frontend.
   attribution?: {
     inviter_id: number
     rebind_available: boolean

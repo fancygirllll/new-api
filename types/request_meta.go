@@ -32,11 +32,11 @@ type TokenCountMeta struct {
 
 type FileMeta struct {
 	FileType
-	Source FileSource // 统一的文件来源（URL 或 base64）
-	Detail string     // 图片细节级别（low/high/auto）
+	Source FileSource // Unified file source (URL or base64)
+	Detail string     // Image detail level (low/high/auto)
 }
 
-// NewFileMeta 创建新的 FileMeta
+// NewFileMeta creates a new FileMeta
 func NewFileMeta(fileType FileType, source FileSource) *FileMeta {
 	return &FileMeta{
 		FileType: fileType,
@@ -44,7 +44,7 @@ func NewFileMeta(fileType FileType, source FileSource) *FileMeta {
 	}
 }
 
-// NewImageFileMeta 创建图片类型的 FileMeta
+// NewImageFileMeta creates a FileMeta of image type
 func NewImageFileMeta(source FileSource, detail string) *FileMeta {
 	return &FileMeta{
 		FileType: FileTypeImage,
@@ -53,7 +53,7 @@ func NewImageFileMeta(source FileSource, detail string) *FileMeta {
 	}
 }
 
-// GetIdentifier 获取文件标识符（用于日志）
+// GetIdentifier returns the file identifier (used for logging)
 func (f *FileMeta) GetIdentifier() string {
 	if f.Source != nil {
 		return f.Source.GetIdentifier()
@@ -61,13 +61,13 @@ func (f *FileMeta) GetIdentifier() string {
 	return "unknown"
 }
 
-// IsURL 判断是否是 URL 来源
+// IsURL reports whether the source is a URL
 func (f *FileMeta) IsURL() bool {
 	return f.Source != nil && f.Source.IsURL()
 }
 
-// GetRawData 获取原始数据（兼容旧代码）
-// Deprecated: 请使用 Source.GetRawData()
+// GetRawData returns the raw data (kept for backward compatibility)
+// Deprecated: use Source.GetRawData() instead
 func (f *FileMeta) GetRawData() string {
 	if f.Source != nil {
 		return f.Source.GetRawData()

@@ -97,7 +97,7 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 	} else if req.HasImage() {
 		action = constant.TaskActionGenerate
 		if info.ChannelType == constant.ChannelTypeVidu {
-			// vidu 增加 首尾帧生视频和参考图生视频
+			// Vidu adds first/last-frame-to-video and reference-image-to-video.
 			if len(req.Images) == 2 {
 				action = constant.TaskActionFirstTailGenerate
 			} else if len(req.Images) > 2 {
@@ -123,7 +123,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 
 	if info.Action == constant.TaskActionReferenceGenerate {
 		if strings.Contains(body.Model, "viduq2") {
-			// 参考图生视频只能用 viduq2 模型, 不能带有pro或turbo后缀 https://platform.vidu.cn/docs/reference-to-video
+			// Reference-image-to-video only supports the viduq2 model and must not have a pro or turbo suffix: https://platform.vidu.cn/docs/reference-to-video
 			body.Model = "viduq2"
 		}
 	}

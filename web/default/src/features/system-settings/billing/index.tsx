@@ -105,7 +105,7 @@ const defaultBillingSettings: BillingSettings = {
   'checkin_setting.enabled': false,
   'checkin_setting.min_quota': 1000,
   'checkin_setting.max_quota': 10000,
-  // 结算设置默认值（契约 §2.4 + §3.4）
+  // Billing setting defaults (contract §2.4 + §3.4)
   CommissionEnabled: false,
   CommissionPayoutDay: 8,
   AffRebindWindowMode: 'days',

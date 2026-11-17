@@ -32,10 +32,10 @@ export const Route = createFileRoute('/(auth)/sign-in')({
   beforeLoad: async ({ search }) => {
     const { auth } = useAuthStore.getState()
 
-    // 如果已经有用户信息，说明已登录
+    // A cached user means the session is already authenticated
     if (auth.user) {
-      // 优先使用 redirect 参数（用户之前想去的地方）
-      // 否则跳转到 dashboard
+      // Prefer the redirect param (where the user originally wanted to go)
+      // Otherwise fall back to the dashboard
       throw redirect({ to: search?.redirect || '/dashboard' })
     }
   },

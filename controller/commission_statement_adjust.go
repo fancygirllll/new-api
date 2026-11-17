@@ -11,19 +11,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 超管调账面（契约 01-CONTRACT.md §4.3 A7/A8 冻结形状，COMM-05/06）。
-// 权限中间件（超管阈值）挂载于路由层注册处，本文件零权限字样（03-03 grep 纪律）。
-// 请求形状冻结——勿增删字段：
+// Super-admin adjustment surface (frozen shape per contract 01-CONTRACT.md §4.3 A7/A8, COMM-05/06).
+// Permission middleware (super-admin threshold) is mounted at route registration; this file contains no permission wording (03-03 grep discipline).
+// Request shape is frozen - do not add or remove fields:
 //   A7 POST /api/commission/flows/manual  {"distributor_id":int,"flow_type":string,"amount_cents":int64,"reason":string}
-//   A8 POST /api/commission/statements/:id/adjustments  {"delta_cents":int64,"reason":string}（仅应付状态可开）
+//   A8 POST /api/commission/statements/:id/adjustments  {"delta_cents":int64,"reason":string} (only allowed for payable statements)
 //
-// 审计纪律（VoidTopUp 先例）：留痕写操作在 model 函数 return nil（事务已提交）之后
-// 事务外执行——失败路径零成功留痕；留痕内部走全局 DB，事务内调用会绕过 tx 且不应随回滚消失。
-// reason 双层校验的 controller 侧：TrimSpace 必填（缺失 → 400 语义信封）。
+// Audit discipline (VoidTopUp precedent): write the audit trail after the model function returns nil (transaction committed)
+// Execute outside the transaction - no success trail on failure paths; the trail uses the global DB internally, so calling it inside a transaction would bypass tx and it should not disappear on rollback.
+// Controller side of the two-layer reason validation: TrimSpace required (missing -> 400 semantics envelope).
 
-// CreateManualCommissionFlow A7 超管人工补录/冲销流水。
-// 校验链主体在 model.CreateManualFlow（flow_type 白名单/金额恒正/目标角色精确判定），
-// controller 侧仅做请求绑定与 reason 必填前置拦截。
+// CreateManualCommissionFlow A7 super-admin manually records/reverses a flow.
+// Most of the validation chain lives in model.CreateManualFlow (flow_type allowlist, positive amount, exact target role check),
+// the controller only binds the request and pre-checks that reason is required.
 func CreateManualCommissionFlow(c *gin.Context) {
 	var req struct {
 		DistributorId int    `json:"distributor_id"`
@@ -32,11 +32,11 @@ func CreateManualCommissionFlow(c *gin.Context) {
 		Reason        string `json:"reason"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		common.ApiErrorMsg(c, "无效的请求参数")
+		common.ApiErrorMsg(c, "Invalid request parameter")
 		return
 	}
 	if strings.TrimSpace(req.Reason) == "" {
-		common.ApiErrorMsg(c, "原因不能为空")
+		common.ApiErrorMsg(c, "Reason cannot be empty")
 		return
 	}
 	operatorId := c.GetInt("id")
@@ -44,17 +44,17 @@ func CreateManualCommissionFlow(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	// 事务提交成功后的审计留痕（失败路径不留成功留痕）
-	model.RecordLog(operatorId, model.LogTypeManage, fmt.Sprintf("人工补录/冲销 distributor_id=%d flow_type=%s amount_cents=%d reason=%s", req.DistributorId, req.FlowType, req.AmountCents, req.Reason))
+	// Audit trail after the transaction commits (no success trail on failure paths)
+	model.RecordLog(operatorId, model.LogTypeManage, fmt.Sprintf("Manual record/reversal distributor_id=%d flow_type=%s amount_cents=%d reason=%s", req.DistributorId, req.FlowType, req.AmountCents, req.Reason))
 	common.ApiSuccess(c, nil)
 }
 
-// CreateStatementAdjustment A8 超管对账单调整单（仅应付状态可开，白名单在 model 层）。
-// 服务端按账单当前累计重算 settle 金额（不信任客户端），原始账单 Total/明细零触碰。
+// CreateStatementAdjustment A8 super-admin statement adjustment (only for payable statements; allowlist enforced in the model layer).
+// The server recomputes the settle amount from the statement's current totals (never trusting the client); the original statement Total/items are untouched.
 func CreateStatementAdjustment(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		common.ApiErrorMsg(c, "无效的账单ID")
+		common.ApiErrorMsg(c, "Invalid statement ID")
 		return
 	}
 	var req struct {
@@ -62,11 +62,11 @@ func CreateStatementAdjustment(c *gin.Context) {
 		Reason     string `json:"reason"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		common.ApiErrorMsg(c, "无效的请求参数")
+		common.ApiErrorMsg(c, "Invalid request parameter")
 		return
 	}
 	if strings.TrimSpace(req.Reason) == "" {
-		common.ApiErrorMsg(c, "原因不能为空")
+		common.ApiErrorMsg(c, "Reason cannot be empty")
 		return
 	}
 	operatorId := c.GetInt("id")
@@ -74,7 +74,7 @@ func CreateStatementAdjustment(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	// 事务提交成功后的审计留痕（失败路径不留成功留痕）
-	model.RecordLog(operatorId, model.LogTypeManage, fmt.Sprintf("账单调整 statement_id=%d delta_cents=%d reason=%s", id, req.DeltaCents, req.Reason))
+	// Audit trail after the transaction commits (no success trail on failure paths)
+	model.RecordLog(operatorId, model.LogTypeManage, fmt.Sprintf("Statement adjustment statement_id=%d delta_cents=%d reason=%s", id, req.DeltaCents, req.Reason))
 	common.ApiSuccess(c, nil)
 }

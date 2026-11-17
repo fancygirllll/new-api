@@ -160,7 +160,7 @@ func RecordLog(userId int, logType int, content string) {
 	}
 }
 
-// RecordLogWithAdminInfo 记录操作日志，并将管理员相关信息存入 Other.admin_info，
+// RecordLogWithAdminInfo records an operation log and stores admin-related info in Other.admin_info,
 func RecordLogWithAdminInfo(userId int, logType int, content string, adminInfo map[string]interface{}) {
 	if logType == LogTypeConsume && !common.LogConsumeEnabled {
 		return
@@ -184,9 +184,9 @@ func RecordLogWithAdminInfo(userId int, logType int, content string, adminInfo m
 	}
 }
 
-// buildOpField 构建语言无关的操作描述（写入 Other.op）。
-// 前端依据 action(稳定操作标识) + params(结构化参数) 在渲染期用 i18n 本地化展示，
-// 因此不在数据库中存储自然语言句子。
+// buildOpField builds a language-neutral operation description (written to Other.op).
+// The frontend uses action (stable operation ID) + params (structured parameters) for i18n localization at render time,
+// so natural-language sentences are not stored in the database.
 func buildOpField(action string, params map[string]interface{}) map[string]interface{} {
 	op := map[string]interface{}{
 		"action": action,
@@ -197,10 +197,10 @@ func buildOpField(action string, params map[string]interface{}) map[string]inter
 	return op
 }
 
-// RecordLoginLog 记录用户登录成功的审计日志（type=LogTypeLogin）。
-// username 由调用方传入（登录流程已持有用户对象），避免额外的数据库查询。
-// content 为英文兜底文本（用于导出/经典前端）；action+params 供前端本地化渲染。
-// extra 可携带 login_method、user_agent 等附加信息（普通用户可见）。
+// RecordLoginLog records an audit log for a successful user login (type=LogTypeLogin).
+// username is passed by the caller (the login flow already has the user object) to avoid an extra database query.
+// content is English fallback text (for export/classic frontend); action+params are used for localized frontend rendering.
+// extra may carry additional info such as login_method and user_agent (visible to regular users).
 func RecordLoginLog(userId int, username string, content string, ip string, action string, params map[string]interface{}, extra map[string]interface{}) {
 	other := map[string]interface{}{}
 	for k, v := range extra {
@@ -221,12 +221,12 @@ func RecordLoginLog(userId int, username string, content string, ip string, acti
 	}
 }
 
-// RecordOperationAuditLog 记录管理/高危操作审计日志（type=LogTypeManage）。
-// logUserId 为日志归属者，管理审计日志应归属实际操作者；目标资源/用户放入
-// action params。username 内部按 logUserId 查询。content 为英文兜底文本（导出/经典前端用）。
-// action+params 写入 Other.op，供前端本地化渲染（普通用户可见，不含敏感信息）。
-// adminInfo 存放操作者身份（写入 Other.admin_info，普通用户查询时剥离）；
-// auditInfo 存放路由/方法/结果等中间件兜底信息（写入 Other.audit_info，普通用户查询时剥离）。
+// RecordOperationAuditLog records admin/high-risk operation audit logs (type=LogTypeManage).
+// logUserId is the log owner; admin audit logs should belong to the actual operator; target resources/users go into
+// action params. username is looked up internally by logUserId. content is English fallback text (for export/classic frontend).
+// action+params are written to Other.op for localized frontend rendering (visible to regular users, no sensitive info).
+// adminInfo holds the operator identity (written to Other.admin_info, stripped for regular-user queries);
+// auditInfo holds middleware fallback info such as route/method/result (written to Other.audit_info, stripped for regular-user queries).
 func RecordOperationAuditLog(logUserId int, content string, ip string, action string, params map[string]interface{}, adminInfo map[string]interface{}, auditInfo map[string]interface{}) {
 	username, _ := GetUsernameById(logUserId, false)
 	other := map[string]interface{}{
@@ -287,7 +287,7 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 	requestId := c.GetString(common.RequestIdKey)
 	upstreamRequestId := c.GetString(common.UpstreamRequestIdKey)
 	otherStr := common.MapToJsonStr(other)
-	// 判断是否需要记录 IP
+	// Determine whether the IP should be recorded
 	needRecordIp := false
 	if settingMap, err := GetUserSetting(userId, false); err == nil {
 		if settingMap.RecordIpLog {
@@ -351,7 +351,7 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	upstreamRequestId := c.GetString(common.UpstreamRequestIdKey)
 	createdAt := common.GetTimestamp()
 	otherStr := common.MapToJsonStr(params.Other)
-	// 判断是否需要记录 IP
+	// Determine whether the IP should be recorded
 	needRecordIp := false
 	if settingMap, err := GetUserSetting(userId, false); err == nil {
 		if settingMap.RecordIpLog {
@@ -416,7 +416,7 @@ type RecordTaskBillingLogParams struct {
 	TokenId   int
 	Group     string
 	Other     map[string]interface{}
-	NodeName  string // 任务发起节点；为空时回退当前节点
+	NodeName  string // Task originating node; falls back to the current node when empty
 }
 
 func RecordTaskBillingLog(params RecordTaskBillingLogParams) {
@@ -598,7 +598,7 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	err = tx.Model(&Log{}).Limit(logSearchCountLimit).Count(&total).Error
 	if err != nil {
 		common.SysError("failed to count user logs: " + err.Error())
-		return nil, 0, errors.New("查询日志失败")
+		return nil, 0, errors.New("Failed to query logs")
 	}
 	order := "logs.id desc"
 	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
@@ -607,7 +607,7 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	err = tx.Order(order).Limit(num).Offset(startIdx).Find(&logs).Error
 	if err != nil {
 		common.SysError("failed to search user logs: " + err.Error())
-		return nil, 0, errors.New("查询日志失败")
+		return nil, 0, errors.New("Failed to query logs")
 	}
 
 	formatUserLogs(logs, startIdx)
@@ -623,7 +623,7 @@ type Stat struct {
 func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string) (stat Stat, err error) {
 	tx := LOG_DB.Table("logs").Select("COALESCE(sum(quota), 0) quota")
 
-	// 为rpm和tpm创建单独的查询
+	// Create separate queries for rpm and tpm
 	rpmTpmQuery := LOG_DB.Table("logs").Select("count(*) rpm, COALESCE(sum(prompt_tokens), 0) + COALESCE(sum(completion_tokens), 0) tpm")
 
 	if tx, err = applyExplicitLogTextFilter(tx, "username", username); err != nil {
@@ -660,17 +660,17 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	tx = tx.Where("type = ?", LogTypeConsume)
 	rpmTpmQuery = rpmTpmQuery.Where("type = ?", LogTypeConsume)
 
-	// 只统计最近60秒的rpm和tpm
+	// Only count rpm and tpm for the last 60 seconds
 	rpmTpmQuery = rpmTpmQuery.Where("created_at >= ?", time.Now().Add(-60*time.Second).Unix())
 
-	// 执行查询
+	// Execute the query
 	if err := tx.Scan(&stat).Error; err != nil {
 		common.SysError("failed to query log stat: " + err.Error())
-		return stat, errors.New("查询统计数据失败")
+		return stat, errors.New("Failed to query statistics")
 	}
 	if err := rpmTpmQuery.Scan(&stat).Error; err != nil {
 		common.SysError("failed to query rpm/tpm stat: " + err.Error())
-		return stat, errors.New("查询统计数据失败")
+		return stat, errors.New("Failed to query statistics")
 	}
 
 	return stat, nil

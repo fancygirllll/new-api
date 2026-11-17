@@ -45,16 +45,16 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	}
 
 	includeUsage := true
-	// 判断用户是否需要返回使用情况
+	// Determine whether the user wants usage information returned.
 	if request.StreamOptions != nil {
 		includeUsage = request.StreamOptions.IncludeUsage
 	}
 
-	// 如果不支持StreamOptions，将StreamOptions设置为nil
+	// If StreamOptions is not supported, set it to nil.
 	if !info.SupportStreamOptions || !lo.FromPtrOr(request.Stream, false) {
 		request.StreamOptions = nil
 	} else {
-		// 如果支持StreamOptions，且请求中没有设置StreamOptions，根据配置文件设置StreamOptions
+		// If StreamOptions is supported and the request did not set it, apply the configured value.
 		if constant.ForceStreamOption {
 			request.StreamOptions = &dto.StreamOptions{
 				IncludeUsage: true,
@@ -113,7 +113,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		relaycommon.AppendRequestConversionFromRequest(info, convertedRequest)
 
 		if info.ChannelSetting.SystemPrompt != "" {
-			// 如果有系统提示，则将其添加到请求中
+			// If there is a system prompt, add it to the request.
 			request, ok := convertedRequest.(*dto.GeneralOpenAIRequest)
 			if ok {
 				containSystemPrompt := false
@@ -124,7 +124,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 					}
 				}
 				if !containSystemPrompt {
-					// 如果没有系统提示，则添加系统提示
+					// If there is no system prompt yet, add it.
 					systemMessage := dto.Message{
 						Role:    request.GetSystemRoleName(),
 						Content: info.ChannelSetting.SystemPrompt,
@@ -132,7 +132,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 					request.Messages = append([]dto.Message{systemMessage}, request.Messages...)
 				} else if info.ChannelSetting.SystemPromptOverride {
 					common.SetContextKey(c, constant.ContextKeySystemPromptOverride, true)
-					// 如果有系统提示，且允许覆盖，则拼接到前面
+					// If a system prompt exists and overriding is allowed, prepend it.
 					for i, message := range request.Messages {
 						if message.Role == request.GetSystemRoleName() {
 							if message.IsStringContent() {
@@ -198,7 +198,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		info.IsStream = info.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
 		if httpResp.StatusCode != http.StatusOK {
 			newApiErr := service.RelayErrorHandler(c.Request.Context(), httpResp, false)
-			// reset status code 重置状态码
+			// reset status code
 			service.ResetStatusCode(newApiErr, statusCodeMappingStr)
 			return newApiErr
 		}
@@ -206,7 +206,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 
 	usage, newApiErr := adaptor.DoResponse(c, httpResp, info)
 	if newApiErr != nil {
-		// reset status code 重置状态码
+		// reset status code
 		service.ResetStatusCode(newApiErr, statusCodeMappingStr)
 		return newApiErr
 	}

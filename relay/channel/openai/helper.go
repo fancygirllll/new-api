@@ -17,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 辅助函数
+// Helper functions.
 func HandleStreamFormat(c *gin.Context, info *relaycommon.RelayInfo, data string, forceFormat bool, thinkToContent bool) error {
 	info.SendResponseCount++
 
@@ -57,7 +57,7 @@ func handleGeminiFormat(c *gin.Context, data string, info *relaycommon.RelayInfo
 
 	geminiResponse := service.StreamResponseOpenAI2Gemini(&streamResponse, info)
 
-	// 如果返回 nil，表示没有实际内容，跳过发送
+	// If nil is returned, there is no actual content, so skip sending.
 	if geminiResponse == nil {
 		return nil
 	}
@@ -178,14 +178,15 @@ func HandleFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, lastStream
 			return
 		}
 
-		// 这里处理的是 openai 最后一个流响应，其 delta 为空，有 finish_reason 字段
-		// 因此相比较于 google 官方的流响应，由 openai 转换而来会多一个 parts 为空，finishReason 为 STOP 的响应
-		// 而包含最后一段文本输出的响应（倒数第二个）的 finishReason 为 null
-		// 暂不知是否有程序会不兼容。
+		// This handles the last OpenAI stream response, whose delta is empty and which has a finish_reason field.
+		// Compared with Google's native stream responses, a response converted from OpenAI has an extra
+		// response with empty parts and finishReason STOP, while the response containing the last text
+		// output (the second to last one) has a null finishReason.
+		// It is unknown whether any client is incompatible with this.
 
 		geminiResponse := service.StreamResponseOpenAI2Gemini(&streamResponse, info)
 
-		// openai 流响应开头的空数据
+		// Empty leading data of the OpenAI stream response.
 		if geminiResponse == nil {
 			return
 		}
@@ -196,7 +197,7 @@ func HandleFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, lastStream
 			return
 		}
 
-		// 发送最终的 Gemini 响应
+		// Send the final Gemini response.
 		c.Render(-1, common.CustomEvent{Data: "data: " + string(geminiResponseStr)})
 		_ = helper.FlushWriter(c)
 	}

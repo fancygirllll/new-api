@@ -95,7 +95,7 @@ func doAwsClientRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor,
 	}
 	a.AwsClient = awsCli
 
-	// 获取对应的AWS模型ID
+	// Get the corresponding AWS model ID.
 	awsModelId := getAwsModelID(info.UpstreamModelName)
 
 	awsRegionPrefix := getAwsRegionPrefix(awsCli.Options().Region)
@@ -122,7 +122,7 @@ func doAwsClientRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor,
 			return nil, types.NewError(errors.Wrap(err, "decode nova request fail"), types.ErrorCodeBadRequestBody)
 		}
 
-		// 使用InvokeModel API，但使用Nova格式的请求体
+		// Use the InvokeModel API but with a Nova-format request body.
 		awsReq := &bedrockruntime.InvokeModelInput{
 			ModelId:     aws.String(awsModelId),
 			Accept:      aws.String("application/json"),
@@ -240,7 +240,7 @@ func awsHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types
 		Usage:        &dto.Usage{},
 	}
 
-	// 复制上游 Content-Type 到客户端响应头
+	// Copy the upstream Content-Type to the client response header.
 	if awsResp.ContentType != nil && *awsResp.ContentType != "" {
 		c.Writer.Header().Set("Content-Type", *awsResp.ContentType)
 	}
@@ -293,7 +293,7 @@ func awsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (
 	return nil, claudeInfo.Usage
 }
 
-// Nova模型处理函数
+// Nova model handler.
 func handleNovaRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types.NewAPIError, *dto.Usage) {
 
 	ctx, cancel := newAwsInvokeContext()
@@ -305,7 +305,7 @@ func handleNovaRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) 
 		return types.NewOpenAIError(errors.Wrap(err, "InvokeModel"), types.ErrorCodeAwsInvokeError, statusCode), nil
 	}
 
-	// 解析Nova响应
+	// Parse the Nova response.
 	var novaResp struct {
 		Output struct {
 			Message struct {
@@ -325,7 +325,7 @@ func handleNovaRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) 
 		return types.NewError(errors.Wrap(err, "unmarshal nova response"), types.ErrorCodeBadResponseBody), nil
 	}
 
-	// 构造OpenAI格式响应
+	// Build the OpenAI-format response.
 	response := dto.OpenAITextResponse{
 		Id:      helper.GetResponseID(c),
 		Object:  "chat.completion",

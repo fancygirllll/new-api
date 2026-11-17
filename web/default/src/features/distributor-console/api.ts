@@ -26,13 +26,13 @@ import {
 } from '@/features/commission-statements/api'
 
 /**
- * 分销商控制台 API 层（契约 01-CONTRACT.md §4.3 A9/A12 + §4.2 B4/B5，v1.5 附录 F）。
- * 响应 interface 与后端 json tag 逐字对齐（06-01 附录 F 冻结形状）；
- * 金额单位纪律：A9/A12/B4 为 int64 分，仅展示层 formatCents 换算；
- * B5 充值行 money 为 float 元（model/topup.go），展示禁用分换算入口。
+ * Distributor console API layer (contract 01-CONTRACT.md §4.3 A9/A12 + §4.2 B4/B5, v1.5 appendix F).
+ * Response interfaces match the backend json tags verbatim (06-01 appendix F frozen shapes);
+ * Amount-unit discipline: A9/A12/B4 are int64 cents; conversion happens only in the display layer via formatCents;
+ * B5 topup rows use money as float yuan (model/topup.go); the display must not use the cents conversion entry.
  */
 
-/** A9 佣金仪表盘（四冻结分字段逐字 + 附录 F2 四笔数扩展） */
+/** A9 commission dashboard (four frozen cent fields verbatim + appendix F2 four-count extension) */
 export interface CommissionDashboard {
   current_pending_cents: number
   total_statement_cents: number
@@ -44,14 +44,14 @@ export interface CommissionDashboard {
   pending_withdraw_count: number
 }
 
-/** A12 未出账实时预览（三冻结字段逐字，§4.3） */
+/** A12 unbilled real-time preview (three frozen fields verbatim, §4.3) */
 export interface CurrentCommission {
   period: string
   pending_flows: number
   pending_cents: number
 }
 
-/** A9 佣金仪表盘（DistributorAuth 会话派生，零客户端参数） */
+/** A9 commission dashboard (DistributorAuth session-derived, zero client parameters) */
 export async function fetchDashboard(): Promise<
   ApiEnvelope<CommissionDashboard>
 > {
@@ -59,13 +59,13 @@ export async function fetchDashboard(): Promise<
   return res.data
 }
 
-/** A12 未出账实时预览（与 A9 当期未出账同谓词，D-05 分工不合并） */
+/** A12 unbilled real-time preview (same predicate as A9 current unbilled; D-05 keeps them separate) */
 export async function fetchCurrent(): Promise<ApiEnvelope<CurrentCommission>> {
   const res = await api.get('/api/commission/current')
   return res.data
 }
 
-/** B4 客户列表项（controller/distributor.go distributorCustomerItem json tag 逐字） */
+/** B4 customer list row (controller/distributor.go distributorCustomerItem json tag verbatim) */
 export interface DistributorCustomerRow {
   id: number
   username: string
@@ -77,7 +77,7 @@ export interface DistributorCustomerRow {
 
 export type DistributorCustomerPageInfo<T> = StatementPageInfo<T>
 
-/** B4 名下客户列表（服务端强制归属过滤，分页信封） */
+/** B4 customers under this distributor (server-enforced attribution filter, paginated envelope) */
 export async function fetchDistributorCustomers(
   page?: number
 ): Promise<ApiEnvelope<DistributorCustomerPageInfo<DistributorCustomerRow>>> {
@@ -87,7 +87,7 @@ export async function fetchDistributorCustomers(
   return res.data
 }
 
-/** B5 客户充值行（model/topup.go TopUp json tag 逐字；money 为 float 元非分） */
+/** B5 customer topup row (model/topup.go TopUp json tag verbatim; money is float yuan, not cents) */
 export interface CustomerTopupRow {
   id: number
   user_id: number
@@ -103,7 +103,7 @@ export interface CustomerTopupRow {
 
 export type CustomerTopupPageInfo<T> = StatementPageInfo<T>
 
-/** B5 单客户充值明细（IDOR：非本人名下客户服务端 403） */
+/** B5 single-customer topup detail (IDOR: server returns 403 for customers not under this distributor) */
 export async function fetchDistributorCustomerTopups(
   customerId: number,
   page?: number
@@ -116,14 +116,14 @@ export async function fetchDistributorCustomerTopups(
   return res.data
 }
 
-/** B6 分销商资料（§4.2 B6 json tag 逐字；aff_link 为服务端拼好的完整链接，直用零加工） */
+/** B6 distributor profile (§4.2 B6 json tag verbatim; aff_link is the complete link assembled server-side, used as-is) */
 export interface DistributorProfile {
   aff_code: string
   aff_link: string
   customer_count: number
 }
 
-/** B6 分销商自己的资料（DistributorAuth 会话派生，零客户端参数） */
+/** B6 this distributor's own profile (DistributorAuth session-derived, zero client parameters) */
 export async function fetchDistributorProfile(): Promise<
   ApiEnvelope<DistributorProfile>
 > {
@@ -131,7 +131,7 @@ export async function fetchDistributorProfile(): Promise<
   return res.data
 }
 
-/** 充值单五态（common/constants.go TopUpStatus* 逐字） */
+/** Five topup statuses (common/constants.go TopUpStatus* verbatim) */
 export type TopupStatus =
   | 'pending'
   | 'success'
@@ -139,7 +139,7 @@ export type TopupStatus =
   | 'expired'
   | 'refunded'
 
-/** 五态 → i18n key（常量映射不透传服务端字符串，T-06-02-03 同款纪律） */
+/** Five statuses → i18n key (constant mapping, never pass through server strings; same discipline as T-06-02-03) */
 export const TOPUP_STATUS_LABEL_KEYS: Record<TopupStatus, string> = {
   pending: 'Topup Pending',
   success: 'Topup Success',
@@ -148,7 +148,7 @@ export const TOPUP_STATUS_LABEL_KEYS: Record<TopupStatus, string> = {
   refunded: 'Topup Refunded',
 }
 
-/** 五态 → 徽标变体（成功醒目，失败/退款警示） */
+/** Five statuses → badge variant (success stands out; failure/refund are warnings) */
 export const TOPUP_STATUS_BADGE_VARIANT: Record<
   TopupStatus,
   'default' | 'secondary' | 'outline' | 'destructive'
@@ -160,5 +160,5 @@ export const TOPUP_STATUS_BADGE_VARIANT: Record<
   refunded: 'destructive',
 }
 
-/** 金额/时间展示复用对账单域唯一入口（禁复制派生，S9） */
+/** Amount/time formatting reuses the single entry from the statement domain (no copy-paste derivation, S9) */
 export { formatCents, formatUnixTime }

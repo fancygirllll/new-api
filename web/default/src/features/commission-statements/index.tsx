@@ -46,10 +46,10 @@ const SECTION_META: Record<CommissionStatementsSectionId, { titleKey: string }> 
   }
 
 /**
- * 管理端对账单页（契约附录 D4 最小只读交付）。
- * 视图组件全部位于共享层（components/*，scope prop 设计），
- * 本文件仅组装 section 与管理端 scope="admin" 传参——Phase 6 分销商控制台
- * 复用同一组件传 scope="self"，禁止复制组件派生第二份实现。
+ * Admin statement page (contract appendix D4 minimal read-only delivery).
+ * View components all live in the shared layer (components/*, scope-prop design);
+ * this file only assembles sections and passes the admin scope="admin"--in Phase 6 the distributor console
+ * reuses the same components with scope="self"; do not copy components to derive a second implementation.
  */
 export function CommissionStatements() {
   const { t } = useTranslation()
@@ -61,7 +61,7 @@ export function CommissionStatements() {
     ? params.section
     : 'list'
   const [selected, setSelected] = useState<CommissionStatement | null>(null)
-  // 6.2 超管调账（A7/A8 RootAuth，Obs-1 补 UI 消费者；入口按 root 收窄，Obs-2 同口径）
+  // 6.2 super-admin adjustments (A7/A8 RootAuth; Obs-1 adds the UI consumer; entry narrowed to root, same as Obs-2)
   const currentUser = useAuthStore((s) => s.auth.user)
   const isRoot = currentUser?.role === ROLE.SUPER_ADMIN
   const [manualFlowOpen, setManualFlowOpen] = useState(false)
@@ -85,7 +85,7 @@ export function CommissionStatements() {
       <SectionPageLayout.Title>
         {t(SECTION_META[active].titleKey)}
       </SectionPageLayout.Title>
-      {/* Obs-1/Obs-2：A7 补录流水入口仅 root 查看者可见（RootAuth，非 root 的死入口不渲染） */}
+      {/* Obs-1/Obs-2: the A7 manual-flow entry is visible only to root viewers (RootAuth; no dead entry for non-root) */}
       {isRoot && (
         <SectionPageLayout.Actions>
           <Button size='sm' onClick={() => setManualFlowOpen(true)}>
@@ -124,7 +124,7 @@ export function CommissionStatements() {
             </>
           )}
 
-          {/* A7/A8 弹窗常驻挂载（受控 open，非条件渲染——弹窗插槽纪律） */}
+          {/* A7/A8 dialogs are always mounted (controlled open, not conditional rendering--dialog slot discipline) */}
           <ManualFlowDialog
             open={manualFlowOpen}
             onOpenChange={setManualFlowOpen}

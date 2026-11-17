@@ -17,9 +17,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * G-4 分销商推广卡（B6 GET /api/distributor/profile，CUST-02 展示面）。
- * aff_code/aff_link/customer_count 直用服务端值零换算（aff_link 服务端已拼好）；
- * 一键复制走 useCopyToClipboard 既有入口（禁手写剪贴板逻辑）。
+ * G-4 distributor promo card (B6 GET /api/distributor/profile, CUST-02 presentation surface).
+ * aff_code/aff_link/customer_count are used directly from server values with zero conversion (aff_link is already assembled server-side);
+ * one-click copy goes through the existing useCopyToClipboard entry (do not hand-roll clipboard logic).
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -36,7 +36,7 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { fetchDistributorProfile, type DistributorProfile } from '../api'
 
 interface PromoCardProps {
-  /** 页级联动刷新键（Pitfall 5，与四卡一致） */
+  /** Page-level refresh key (Pitfall 5, consistent with the four cards) */
   refreshKey?: number
 }
 
@@ -49,10 +49,10 @@ export function PromoCard({ refreshKey }: PromoCardProps) {
     try {
       const res = await fetchDistributorProfile()
       if (res.success && res.data) {
-        setProfile(res.data) // 服务端值直用，零前端换算
+        setProfile(res.data) // Use the server value directly, no frontend conversion
       }
     } catch {
-      // 静默失败：推广卡为辅助信息，不阻塞 overview 其余卡片
+      // Silent failure: the promo card is auxiliary information and must not block the other overview cards
     }
   }, [])
 

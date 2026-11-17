@@ -46,10 +46,10 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 		return
 	}
 
-	// 无条件新建 StreamStatus
+	// Always create a new StreamStatus.
 	info.StreamStatus = relaycommon.NewStreamStatus()
 
-	// 确保响应体总是被关闭
+	// Ensure the response body is always closed.
 	defer func() {
 		if resp.Body != nil {
 			resp.Body.Close()
@@ -59,12 +59,12 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 	streamingTimeout := time.Duration(constant.StreamingTimeout) * time.Second
 
 	var (
-		stopChan   = make(chan bool, 3) // 增加缓冲区避免阻塞
+		stopChan   = make(chan bool, 3) // Extra buffer to avoid blocking
 		scanner    = NewStreamScanner(resp.Body)
 		ticker     = time.NewTicker(streamingTimeout)
 		pingTicker *time.Ticker
 		writeMutex sync.Mutex     // Mutex to protect concurrent writes
-		wg         sync.WaitGroup // 用于等待所有 goroutine 退出
+		wg         sync.WaitGroup // Used to wait for all goroutines to exit
 	)
 
 	generalSettings := operation_setting.GetGeneralSetting()
@@ -84,9 +84,9 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 	logger.LogDebug(c, "streaming timeout seconds: %d", int64(streamingTimeout.Seconds()))
 	logger.LogDebug(c, "ping interval seconds: %d", int64(pingInterval.Seconds()))
 
-	// 改进资源清理，确保所有 goroutine 正确退出
+	// Improve resource cleanup so all goroutines exit correctly.
 	defer func() {
-		// 通知所有 goroutine 停止
+		// Notify all goroutines to stop.
 		common.SafeSendBool(stopChan, true)
 
 		ticker.Stop()
@@ -94,7 +94,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 			pingTicker.Stop()
 		}
 
-		// 等待所有 goroutine 退出，最多等待5秒
+		// Wait for all goroutines to exit, for at most 5 seconds.
 		done := make(chan struct{})
 		gopool.Go(func() {
 			wg.Wait()
@@ -132,15 +132,15 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 				logger.LogDebug(c, "ping goroutine exited")
 			}()
 
-			// 添加超时保护，防止 goroutine 无限运行
-			maxPingDuration := 30 * time.Minute // 最大 ping 持续时间
+			// Add a timeout guard to prevent the goroutine from running forever.
+			maxPingDuration := 30 * time.Minute // Maximum ping duration
 			pingTimeout := time.NewTimer(maxPingDuration)
 			defer pingTimeout.Stop()
 
 			for {
 				select {
 				case <-pingTicker.C:
-					// 使用超时机制防止写操作阻塞
+					// Use a timeout mechanism to prevent write operations from blocking.
 					done := make(chan error, 1)
 					gopool.Go(func() {
 						writeMutex.Lock()
@@ -170,7 +170,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 				case <-stopChan:
 					return
 				case <-c.Request.Context().Done():
-					// 监听客户端断开连接
+					// Watch for client disconnection.
 					return
 				case <-pingTimeout.C:
 					logger.LogError(c, "ping goroutine max duration reached")
@@ -219,7 +219,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 		}()
 
 		for scanner.Scan() {
-			// 检查是否需要停止
+			// Check whether a stop has been requested.
 			select {
 			case <-stopChan:
 				return
@@ -273,7 +273,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 		info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonEOF, nil)
 	})
 
-	// 主循环等待完成或超时
+	// Main loop waits for completion or timeout.
 	select {
 	case <-ticker.C:
 		info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonTimeout, nil)

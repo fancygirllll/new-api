@@ -159,7 +159,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	// common.SetContextKey(c, constant.ContextKeyTokenCountMeta, meta)
 
 	if priceData.FreeModel {
-		logger.LogInfo(c, fmt.Sprintf("模型 %s 免费，跳过预扣费", relayInfo.OriginModelName))
+		logger.LogInfo(c, fmt.Sprintf("Model %s is free, skipping the pre-charge", relayInfo.OriginModelName))
 	} else {
 		newAPIError = service.PreConsumeBilling(c, priceData.QuotaToPreConsume, relayInfo)
 		if newAPIError != nil {
@@ -238,7 +238,7 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	useChannel := c.GetStringSlice("use_channel")
 	if len(useChannel) > 1 {
-		retryLogStr := fmt.Sprintf("重试：%s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
+		retryLogStr := fmt.Sprintf("Retry: %s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
 		logger.LogInfo(c, retryLogStr)
 	}
 	if newAPIError != nil {
@@ -249,9 +249,9 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 }
 
 var upgrader = websocket.Upgrader{
-	Subprotocols: []string{"realtime"}, // WS 握手支持的协议，如果有使用 Sec-WebSocket-Protocol，则必须在此声明对应的 Protocol TODO add other protocol
+	Subprotocols: []string{"realtime"}, // Protocols supported in the WS handshake; if Sec-WebSocket-Protocol is used, the corresponding protocol must be declared here TODO add other protocol
 	CheckOrigin: func(r *http.Request) bool {
-		return true // 允许跨域
+		return true // Allow cross-origin
 	},
 }
 
@@ -309,10 +309,10 @@ func getChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service
 	info.PriceData.GroupRatioInfo = helper.HandleGroupRatio(c, info)
 
 	if err != nil {
-		return nil, types.NewError(fmt.Errorf("获取分组 %s 下模型 %s 的可用渠道失败（retry）: %s", selectGroup, info.OriginModelName, err.Error()), types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())
+		return nil, types.NewError(fmt.Errorf("Failed to get an available channel for model %s in group %s (retry): %s", selectGroup, info.OriginModelName, err.Error()), types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())
 	}
 	if channel == nil {
-		return nil, types.NewError(fmt.Errorf("分组 %s 下模型 %s 的可用渠道不存在（retry）", selectGroup, info.OriginModelName), types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())
+		return nil, types.NewError(fmt.Errorf("No available channel for model %s in group %s (retry)", selectGroup, info.OriginModelName), types.ErrorCodeGetChannelFailed, types.ErrOptionWithSkipRetry())
 	}
 
 	newAPIError := middleware.SetupContextForSelectedChannel(c, channel, info.OriginModelName)
@@ -356,7 +356,7 @@ func shouldRetry(c *gin.Context, openaiErr *types.NewAPIError, retryTimes int) b
 
 func processChannelError(c *gin.Context, channelError types.ChannelError, err *types.NewAPIError) {
 	logger.LogError(c, fmt.Sprintf("channel error (channel #%d, status code: %d): %s", channelError.ChannelId, err.StatusCode, common.LocalLogPreview(err.Error())))
-	// 不要使用context获取渠道信息，异步处理时可能会出现渠道信息不一致的情况
+	// Do not get channel info from context; async processing may see inconsistent channel info
 	// do not use context to get channel info, there may be inconsistent channel info when processing asynchronously
 	if service.ShouldDisableChannel(err) && channelError.AutoBan {
 		gopool.Go(func() {
@@ -365,7 +365,7 @@ func processChannelError(c *gin.Context, channelError types.ChannelError, err *t
 	}
 
 	if constant.ErrorLogEnabled && types.IsRecordErrorLog(err) {
-		// 保存错误日志到mysql中
+		// Save the error log to MySQL
 		userId := c.GetInt("id")
 		tokenName := c.GetString("token_name")
 		modelName := c.GetString("original_model")
@@ -431,7 +431,7 @@ func RelayMidjourney(c *gin.Context) {
 	if mjErr != nil {
 		statusCode := http.StatusBadRequest
 		if mjErr.Code == 30 {
-			mjErr.Result = "当前分组负载已饱和，请稍后再试，或升级账户以提升服务质量。"
+			mjErr.Result = "The current group is at capacity. Please try again later, or upgrade your account for better service quality."
 			statusCode = http.StatusTooManyRequests
 		}
 		c.JSON(statusCode, gin.H{
@@ -567,11 +567,11 @@ func RelayTask(c *gin.Context) {
 
 	useChannel := c.GetStringSlice("use_channel")
 	if len(useChannel) > 1 {
-		retryLogStr := fmt.Sprintf("重试：%s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
+		retryLogStr := fmt.Sprintf("Retry: %s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
 		logger.LogInfo(c, retryLogStr)
 	}
 
-	// ── 成功：结算 + 日志 + 插入任务 ──
+	// ── Success: settle + log + insert task ──
 	if taskErr == nil {
 		if settleErr := service.SettleBilling(c, relayInfo, result.Quota); settleErr != nil {
 			common.SysError("settle task billing error: " + settleErr.Error())
@@ -605,10 +605,10 @@ func RelayTask(c *gin.Context) {
 	}
 }
 
-// respondTaskError 统一输出 Task 错误响应（含 429 限流提示改写）
+// respondTaskError emits unified Task error responses (including rewriting the 429 rate-limit message)
 func respondTaskError(c *gin.Context, taskErr *dto.TaskError) {
 	if taskErr.StatusCode == http.StatusTooManyRequests {
-		taskErr.Message = "当前分组上游负载已饱和，请稍后再试"
+		taskErr.Message = "The upstream for the current group is at capacity, please try again later"
 	}
 	c.JSON(taskErr.StatusCode, taskErr)
 }
@@ -633,7 +633,7 @@ func shouldRetryTaskRelay(c *gin.Context, channelId int, taskErr *dto.TaskError,
 		return true
 	}
 	if taskErr.StatusCode/100 == 5 {
-		// 超时不重试
+		// Do not retry on timeout
 		if operation_setting.IsAlwaysSkipRetryStatusCode(taskErr.StatusCode) {
 			return false
 		}
@@ -643,7 +643,7 @@ func shouldRetryTaskRelay(c *gin.Context, channelId int, taskErr *dto.TaskError,
 		return false
 	}
 	if taskErr.StatusCode == 408 {
-		// azure处理超时不重试
+		// Do not retry Azure timeouts
 		return false
 	}
 	if taskErr.LocalError {

@@ -2,7 +2,7 @@ package operation_setting
 
 import "github.com/QuantumNous/new-api/setting/config"
 
-// 额度展示类型
+// Quota display types
 const (
 	QuotaDisplayTypeUSD    = "USD"
 	QuotaDisplayTypeCNY    = "CNY"
@@ -14,15 +14,15 @@ type GeneralSetting struct {
 	DocsLink            string `json:"docs_link"`
 	PingIntervalEnabled bool   `json:"ping_interval_enabled"`
 	PingIntervalSeconds int    `json:"ping_interval_seconds"`
-	// 当前站点额度展示类型：USD / CNY / TOKENS
+	// Quota display type for the current site: USD / CNY / TOKENS
 	QuotaDisplayType string `json:"quota_display_type"`
-	// 自定义货币符号，用于 CUSTOM 展示类型
+	// Custom currency symbol for the CUSTOM display type
 	CustomCurrencySymbol string `json:"custom_currency_symbol"`
-	// 自定义货币与美元汇率（1 USD = X Custom）
+	// Exchange rate between the custom currency and USD (1 USD = X Custom)
 	CustomCurrencyExchangeRate float64 `json:"custom_currency_exchange_rate"`
 }
 
-// 默认配置
+// Default configuration
 var generalSetting = GeneralSetting{
 	DocsLink:                   "https://docs.newapi.pro",
 	PingIntervalEnabled:        false,
@@ -33,7 +33,7 @@ var generalSetting = GeneralSetting{
 }
 
 func init() {
-	// 注册到全局配置管理器
+	// Register with the global config manager
 	config.GlobalConfig.Register("general_setting", &generalSetting)
 }
 
@@ -41,22 +41,22 @@ func GetGeneralSetting() *GeneralSetting {
 	return &generalSetting
 }
 
-// IsCurrencyDisplay 是否以货币形式展示（美元或人民币）
+// IsCurrencyDisplay reports whether quotas are displayed as currency (USD or CNY)
 func IsCurrencyDisplay() bool {
 	return generalSetting.QuotaDisplayType != QuotaDisplayTypeTokens
 }
 
-// IsCNYDisplay 是否以人民币展示
+// IsCNYDisplay reports whether quotas are displayed in CNY
 func IsCNYDisplay() bool {
 	return generalSetting.QuotaDisplayType == QuotaDisplayTypeCNY
 }
 
-// GetQuotaDisplayType 返回额度展示类型
+// GetQuotaDisplayType returns the quota display type
 func GetQuotaDisplayType() string {
 	return generalSetting.QuotaDisplayType
 }
 
-// GetCurrencySymbol 返回当前展示类型对应符号
+// GetCurrencySymbol returns the symbol for the current display type
 func GetCurrencySymbol() string {
 	switch generalSetting.QuotaDisplayType {
 	case QuotaDisplayTypeUSD:
@@ -73,7 +73,7 @@ func GetCurrencySymbol() string {
 	}
 }
 
-// GetUsdToCurrencyRate 返回 1 USD = X <currency> 的 X（TOKENS 不适用）
+// GetUsdToCurrencyRate returns X in 1 USD = X <currency> (not applicable to TOKENS)
 func GetUsdToCurrencyRate(usdToCny float64) float64 {
 	switch generalSetting.QuotaDisplayType {
 	case QuotaDisplayTypeUSD:

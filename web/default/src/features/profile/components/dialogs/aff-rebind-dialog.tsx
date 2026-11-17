@@ -28,9 +28,9 @@ import { Label } from '@/components/ui/label'
 
 // ============================================================================
 // Aff Rebind Dialog Component
-// 提交走 POST /api/user/aff_rebind（契约 §4.2 B1），经 use-profile.ts affRebind
-// → api.ts postAffRebind；错误映射（400 码无效/非分销商/已归属，403 超窗口）
-// 在 hook 内完成（单一 toast 责任方）。
+// Submission goes through POST /api/user/aff_rebind (contract §4.2 B1) via use-profile.ts affRebind
+// → api.ts postAffRebind; error mapping (400 invalid code / not a distributor / already attributed, 403 window exceeded)
+// happens inside the hook (single toast owner).
 // ============================================================================
 
 interface AffRebindDialogProps {
@@ -61,7 +61,7 @@ export function AffRebindDialog({
       const ok = await onRebind({ aff_code: affCode.trim() })
 
       if (ok) {
-        onSuccess() // 触发 profile 刷新，attribution.rebind_available 变 false，入口消失
+        onSuccess() // Trigger a profile refresh; attribution.rebind_available becomes false and the entry disappears
         onOpenChange(false)
         setAffCode('')
       }

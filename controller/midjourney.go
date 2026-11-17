@@ -43,13 +43,13 @@ func runMidjourneyTaskUpdateOnce(ctx context.Context, report func(processed, tot
 	}
 	summary.UnfinishedTasks = len(tasks)
 
-	logger.LogInfo(ctx, fmt.Sprintf("检测到未完成的任务数有: %v", len(tasks)))
+	logger.LogInfo(ctx, fmt.Sprintf("Unfinished tasks detected: %v", len(tasks)))
 	taskChannelM := make(map[int][]string)
 	taskM := make(map[string]*model.Midjourney)
 	nullTaskIds := make([]int, 0)
 	for _, task := range tasks {
 		if task.MjId == "" {
-			// 统计失败的未完成任务
+			// Count failed unfinished tasks
 			nullTaskIds = append(nullTaskIds, task.Id)
 			continue
 		}
@@ -83,7 +83,7 @@ func runMidjourneyTaskUpdateOnce(ctx context.Context, report func(processed, tot
 		}
 		processedChannels++
 		summary.ChannelsScanned++
-		logger.LogInfo(ctx, fmt.Sprintf("渠道 #%d 未完成的任务有: %d", channelId, len(taskIds)))
+		logger.LogInfo(ctx, fmt.Sprintf("Channel #%d has unfinished tasks: %d", channelId, len(taskIds)))
 		if len(taskIds) == 0 {
 			continue
 		}
@@ -91,7 +91,7 @@ func runMidjourneyTaskUpdateOnce(ctx context.Context, report func(processed, tot
 		if err != nil {
 			logger.LogError(ctx, fmt.Sprintf("CacheGetChannel: %v", err))
 			err := model.MjBulkUpdate(taskIds, map[string]any{
-				"fail_reason": fmt.Sprintf("获取渠道信息失败，请联系管理员，渠道ID：%d", channelId),
+				"fail_reason": fmt.Sprintf("Failed to get channel info. Contact the administrator. Channel ID: %d", channelId),
 				"status":      "FAILURE",
 				"progress":    "100%",
 			})
@@ -158,9 +158,9 @@ func runMidjourneyTaskUpdateOnce(ctx context.Context, report func(processed, tot
 			}
 
 			useTime := (time.Now().UnixNano() / int64(time.Millisecond)) - task.SubmitTime
-			// 如果时间超过一小时，且进度不是100%，则认为任务失败
+			// If more than one hour has elapsed and progress is below 100%, treat the task as failed
 			if useTime > 3600000 && task.Progress != "100%" {
-				responseItem.FailReason = "上游任务超时（超过1小时）"
+				responseItem.FailReason = "Upstream task timed out (over 1 hour)"
 				responseItem.Status = "FAILURE"
 			}
 			if !checkMjTaskNeedUpdate(task, responseItem) {
@@ -185,25 +185,25 @@ func runMidjourneyTaskUpdateOnce(ctx context.Context, report func(processed, tot
 				buttonStr, _ := common.Marshal(responseItem.Buttons)
 				task.Buttons = string(buttonStr)
 			}
-			// 映射 VideoUrl
+			// Map VideoUrl
 			task.VideoUrl = responseItem.VideoUrl
 
-			// 映射 VideoUrls - 将数组序列化为 JSON 字符串
+			// Map VideoUrls - serialize the array into a JSON string
 			if responseItem.VideoUrls != nil && len(responseItem.VideoUrls) > 0 {
 				videoUrlsStr, err := common.Marshal(responseItem.VideoUrls)
 				if err != nil {
-					logger.LogError(ctx, fmt.Sprintf("序列化 VideoUrls 失败: %v", err))
-					task.VideoUrls = "[]" // 失败时设置为空数组
+					logger.LogError(ctx, fmt.Sprintf("Failed to serialize VideoUrls: %v", err))
+					task.VideoUrls = "[]" // Set to an empty array on failure
 				} else {
 					task.VideoUrls = string(videoUrlsStr)
 				}
 			} else {
-				task.VideoUrls = "" // 空值时清空字段
+				task.VideoUrls = "" // Clear the field when the value is empty
 			}
 
 			shouldReturnQuota := false
 			if (task.Progress != "100%" && responseItem.FailReason != "") || (task.Progress == "100%" && task.Status == "FAILURE") {
-				logger.LogInfo(ctx, task.MjId+" 构建失败，"+task.FailReason)
+				logger.LogInfo(ctx, task.MjId+" build failed, "+task.FailReason)
 				task.Progress = "100%"
 				if task.Quota != 0 {
 					shouldReturnQuota = true
@@ -226,7 +226,7 @@ func runMidjourneyTaskUpdateOnce(ctx context.Context, report func(processed, tot
 					Quota:     task.Quota,
 					Other: map[string]interface{}{
 						"task_id": task.MjId,
-						"reason":  "构图失败",
+						"reason":  "Composition failed",
 					},
 				})
 			}
@@ -275,18 +275,18 @@ func checkMjTaskNeedUpdate(oldTask *model.Midjourney, newTask dto.MidjourneyDto)
 	if oldTask.Progress != "100%" && newTask.FailReason != "" {
 		return true
 	}
-	// 检查 VideoUrl 是否需要更新
+	// Check whether VideoUrl needs updating
 	if oldTask.VideoUrl != newTask.VideoUrl {
 		return true
 	}
-	// 检查 VideoUrls 是否需要更新
+	// Check whether VideoUrls needs updating
 	if newTask.VideoUrls != nil && len(newTask.VideoUrls) > 0 {
 		newVideoUrlsStr, _ := common.Marshal(newTask.VideoUrls)
 		if oldTask.VideoUrls != string(newVideoUrlsStr) {
 			return true
 		}
 	} else if oldTask.VideoUrls != "" {
-		// 如果新数据没有 VideoUrls 但旧数据有，需要更新（清空）
+		// If the new data has no VideoUrls but the old data does, update (clear) it
 		return true
 	}
 
@@ -296,7 +296,7 @@ func checkMjTaskNeedUpdate(oldTask *model.Midjourney, newTask dto.MidjourneyDto)
 func GetAllMidjourney(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 
-	// 解析其他查询参数
+	// Parse other query parameters
 	queryParams := model.TaskQueryParams{
 		ChannelID:      c.Query("channel_id"),
 		MjID:           c.Query("mj_id"),

@@ -25,7 +25,7 @@ type Midjourney struct {
 	Properties  string `json:"properties"`
 }
 
-// TaskQueryParams 用于包含所有搜索条件的结构体，可以根据需求添加更多字段
+// TaskQueryParams holds all search conditions; more fields can be added as needed
 type TaskQueryParams struct {
 	ChannelID      string
 	MjID           string
@@ -37,21 +37,21 @@ func GetAllUserTask(userId int, startIdx int, num int, queryParams TaskQueryPara
 	var tasks []*Midjourney
 	var err error
 
-	// 初始化查询构建器
+	// Initialize the query builder
 	query := DB.Where("user_id = ?", userId)
 
 	if queryParams.MjID != "" {
 		query = query.Where("mj_id = ?", queryParams.MjID)
 	}
 	if queryParams.StartTimestamp != "" {
-		// 假设您已将前端传来的时间戳转换为数据库所需的时间格式，并处理了时间戳的验证和解析
+		// Assumes the frontend timestamps have been converted to the database time format, validated, and parsed
 		query = query.Where("submit_time >= ?", queryParams.StartTimestamp)
 	}
 	if queryParams.EndTimestamp != "" {
 		query = query.Where("submit_time <= ?", queryParams.EndTimestamp)
 	}
 
-	// 获取数据
+	// Fetch the data
 	err = query.Order("id desc").Limit(num).Offset(startIdx).Find(&tasks).Error
 	if err != nil {
 		return nil
@@ -64,10 +64,10 @@ func GetAllTasks(startIdx int, num int, queryParams TaskQueryParams) []*Midjourn
 	var tasks []*Midjourney
 	var err error
 
-	// 初始化查询构建器
+	// Initialize the query builder
 	query := DB
 
-	// 添加过滤条件
+	// Add filter conditions
 	if queryParams.ChannelID != "" {
 		query = query.Where("channel_id = ?", queryParams.ChannelID)
 	}
@@ -81,7 +81,7 @@ func GetAllTasks(startIdx int, num int, queryParams TaskQueryParams) []*Midjourn
 		query = query.Where("submit_time <= ?", queryParams.EndTimestamp)
 	}
 
-	// 获取数据
+	// Fetch the data
 	err = query.Order("id desc").Limit(num).Offset(startIdx).Find(&tasks).Error
 	if err != nil {
 		return nil

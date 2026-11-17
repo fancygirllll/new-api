@@ -22,8 +22,8 @@ type PriceData struct {
 	AudioCompletionRatio float64
 	OtherRatios          map[string]float64
 	UsePrice             bool
-	Quota                int // 按次计费的最终额度（MJ / Task）
-	QuotaToPreConsume    int // 按量计费的预消耗额度
+	Quota                int // Final quota for per-request billing (MJ / Task)
+	QuotaToPreConsume    int // Pre-consumed quota for usage-based billing
 	GroupRatioInfo       GroupRatioInfo
 }
 

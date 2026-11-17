@@ -306,19 +306,19 @@ export function PaymentSettingsSection({
         type: 'input' as const,
         text: t('I have read and understood the above compliance reminder'),
       },
-      { type: 'static' as const, text: t('，') },
+      { type: 'static' as const, text: ', ' },
       {
         type: 'input' as const,
         text: t('acknowledge the related legal risks'),
       },
-      { type: 'static' as const, text: t('，and ') },
+      { type: 'static' as const, text: ' and ' },
       {
         type: 'input' as const,
         text: t(
           'confirm that I bear legal responsibility arising from deployment'
         ),
       },
-      { type: 'static' as const, text: t('、') },
+      { type: 'static' as const, text: ', ' },
       {
         type: 'input' as const,
         text: t('operation and charging behavior'),
@@ -987,7 +987,7 @@ export function PaymentSettingsSection({
                           <Textarea
                             rows={4}
                             placeholder={t(
-                              '[{"name":"支付宝","type":"alipay","icon":"SiAlipay"}]'
+                              '[{"name":"Alipay","type":"alipay","icon":"SiAlipay"}]'
                             )}
                             {...field}
                             onChange={(event) =>

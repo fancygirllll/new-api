@@ -1,8 +1,8 @@
 package model
 
-// RefreshPricing 强制立即重新计算与定价相关的缓存。
-// 该方法用于需要最新数据的内部管理 API，
-// 因此会绕过默认的 1 分钟延迟刷新。
+// RefreshPricing forces an immediate recomputation of pricing-related caches.
+// Used by internal admin APIs that need the freshest data,
+// so it bypasses the default 1-minute delayed refresh.
 func RefreshPricing() {
 	updatePricingLock.Lock()
 	defer updatePricingLock.Unlock()

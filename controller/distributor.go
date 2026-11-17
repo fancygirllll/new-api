@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// distributorCustomerItem B4 客户列表项（契约 §4.2 B4）。
+// distributorCustomerItem is a B4 customer list item (contract §4.2 B4).
 type distributorCustomerItem struct {
 	Id                   int    `json:"id"`
 	Username             string `json:"username"`
@@ -22,12 +22,12 @@ type distributorCustomerItem struct {
 	TotalCommissionCents int64  `json:"total_commission_cents"`
 }
 
-// listDistributorCustomerItems 按分销商 ID 分页列出其名下客户并聚合两列金额
-// （B4/B7 共用参数化实现，plan 6.1 G-1 抽取；distributorId 来源由调用方决定：
-// B4 强制会话收窄、B7 管理员侧取 path :id，本函数零权限语义）。
-// total_topup_cents 从 TopUp.Money 聚合（SUM*100，F4 佣金基数语义）。
-// total_commission_cents 由佣金流水金额聚合接线（契约附录 D5.3；正负相抵，reversal 为负数），
-// WHERE distributor_id = ? AND customer_id IN ? 双谓词限定防跨分销商读取（T-04-02-03）。
+// listDistributorCustomerItems paginates the customers under a distributor and aggregates the two amount columns
+// (shared parameterized implementation for B4/B7, extracted per plan 6.1 G-1; the distributorId source is decided by the caller:
+// B4 narrows from the session, B7 takes path :id on the admin side; this function has no permission semantics).
+// total_topup_cents is aggregated from TopUp.Money (SUM*100, F4 commission base semantics).
+// total_commission_cents is wired from the aggregated commission flow amounts (contract appendix D5.3; positives and negatives offset, reversals are negative),
+// the WHERE distributor_id = ? AND customer_id IN ? double predicate prevents cross-distributor reads (T-04-02-03).
 func listDistributorCustomerItems(distributorId int, pageInfo *common.PageInfo) ([]distributorCustomerItem, int, error) {
 	var users []model.User
 	var total int64
@@ -44,7 +44,7 @@ func listDistributorCustomerItems(distributorId int, pageInfo *common.PageInfo) 
 		return nil, 0, err
 	}
 
-	// 佣金聚合：本页客户批量聚合佣金金额；flows 金额列本就 int64 cents，直取无精度问题。
+	// Commission aggregation: aggregate commission amounts for this page's customers in bulk; the flows amount column is already int64 cents, so reading it directly has no precision issues.
 	customerIds := make([]int, 0, len(users))
 	for _, u := range users {
 		customerIds = append(customerIds, u.Id)
@@ -65,7 +65,7 @@ func listDistributorCustomerItems(distributorId int, pageInfo *common.PageInfo) 
 		}
 	}
 
-	// 逐客户聚合 total_topup_cents（SUM(money)*100，F4 佣金基数=实付金额）
+	// Aggregate total_topup_cents per customer (SUM(money)*100, F4 commission base = amount actually paid)
 	items := make([]distributorCustomerItem, 0, len(users))
 	for _, u := range users {
 		var totalMoney float64
@@ -79,14 +79,14 @@ func listDistributorCustomerItems(distributorId int, pageInfo *common.PageInfo) 
 			DisplayName:          u.DisplayName,
 			CreatedAt:            u.CreatedAt,
 			TotalTopupCents:      int64(math.Round(totalMoney * 100)),
-			TotalCommissionCents: commissionByCustomer[u.Id], // 聚合佣金金额直取，无流水为 0
+			TotalCommissionCents: commissionByCustomer[u.Id], // Aggregated commission amount read directly; 0 when there are no flows
 		})
 	}
 	return items, int(total), nil
 }
 
-// GetDistributorCustomers B4 分销商客户列表（DistributorAuth）。
-// 服务端强制 WHERE inviter_id = 当前分销商（ROLE-02，不依赖前端隔离）。
+// GetDistributorCustomers B4 distributor customer list (DistributorAuth).
+// Server-side WHERE inviter_id = current distributor (ROLE-02, not relying on frontend isolation).
 func GetDistributorCustomers(c *gin.Context) {
 	distributorId := c.GetInt("id")
 	pageInfo := common.GetPageQuery(c)
@@ -100,8 +100,8 @@ func GetDistributorCustomers(c *gin.Context) {
 	common.ApiSuccess(c, pageInfo)
 }
 
-// GetDistributorCustomerTopups B5 单客户充值明细（DistributorAuth）。
-// IDOR 防护：服务端校验目标客户 inviter_id == 当前分销商，否则 403（契约 §4.2 B5）。
+// GetDistributorCustomerTopups B5 top-up detail for one customer (DistributorAuth).
+// IDOR protection: the server verifies the target customer's inviter_id == current distributor, otherwise 403 (contract §4.2 B5).
 func GetDistributorCustomerTopups(c *gin.Context) {
 	distributorId := c.GetInt("id")
 	customerId, err := strconv.Atoi(c.Param("id"))
@@ -113,7 +113,7 @@ func GetDistributorCustomerTopups(c *gin.Context) {
 		return
 	}
 
-	// IDOR 防护：校验目标客户归属当前分销商
+	// IDOR protection: verify the target customer belongs to the current distributor
 	var customer model.User
 	if err := model.DB.Select("id, inviter_id").First(&customer, "id = ?", customerId).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -150,8 +150,8 @@ func GetDistributorCustomerTopups(c *gin.Context) {
 	common.ApiSuccess(c, pageInfo)
 }
 
-// GetDistributorProfile B6 分销商自己的资料（DistributorAuth）。
-// 返回 aff_code / aff_link / customer_count。
+// GetDistributorProfile B6 the distributor's own profile (DistributorAuth).
+// Returns aff_code / aff_link / customer_count.
 func GetDistributorProfile(c *gin.Context) {
 	distributorId := c.GetInt("id")
 	user, err := model.GetUserById(distributorId, false)

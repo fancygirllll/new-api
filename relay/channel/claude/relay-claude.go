@@ -77,16 +77,16 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 			Name: "web_search",
 		}
 
-		// 处理 user_location
+		// Handle user_location.
 		if textRequest.WebSearchOptions.UserLocation != nil {
 			anthropicUserLocation := &dto.ClaudeWebSearchUserLocation{
-				Type: "approximate", // 固定为 "approximate"
+				Type: "approximate", // Fixed to "approximate"
 			}
 
-			// 解析 UserLocation JSON
+			// Parse the UserLocation JSON.
 			var userLocationMap map[string]interface{}
 			if err := common.Unmarshal(textRequest.WebSearchOptions.UserLocation, &userLocationMap); err == nil {
-				// 检查是否有 approximate 字段
+				// Check whether the approximate field is present.
 				if approximateData, ok := userLocationMap["approximate"].(map[string]interface{}); ok {
 					if timezone, ok := approximateData["timezone"].(string); ok && timezone != "" {
 						anthropicUserLocation.Timezone = timezone
@@ -106,7 +106,7 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 			webSearchTool.UserLocation = anthropicUserLocation
 		}
 
-		// 处理 search_context_size 转换为 max_uses
+		// Convert search_context_size to max_uses.
 		if textRequest.WebSearchOptions.SearchContextSize != "" {
 			switch textRequest.WebSearchOptions.SearchContextSize {
 			case "low":
@@ -140,7 +140,7 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 		claudeRequest.Stream = common.GetPointer(true)
 	}
 
-	// 处理 tool_choice 和 parallel_tool_calls
+	// Handle tool_choice and parallel_tool_calls.
 	if textRequest.ToolChoice != nil || textRequest.ParallelTooCalls != nil {
 		claudeToolChoice := mapToolChoice(textRequest.ToolChoice, textRequest.ParallelTooCalls)
 		if claudeToolChoice != nil {
@@ -187,17 +187,17 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 			claudeRequest.TopP = nil
 			claudeRequest.TopK = nil
 		} else {
-			// 因为BudgetTokens 必须大于1024
+			// BudgetTokens must be greater than 1024.
 			if claudeRequest.MaxTokens == nil || *claudeRequest.MaxTokens < 1280 {
 				claudeRequest.MaxTokens = common.GetPointer[uint](1280)
 			}
 
-			// BudgetTokens 为 max_tokens 的 80%
+			// BudgetTokens is 80% of max_tokens.
 			claudeRequest.Thinking = &dto.Thinking{
 				Type:         "enabled",
 				BudgetTokens: common.GetPointer[int](int(float64(*claudeRequest.MaxTokens) * model_setting.GetClaudeSettings().ThinkingAdapterBudgetTokensPercentage)),
 			}
-			// TODO: 临时处理
+			// TODO: temporary workaround
 			// https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking#important-considerations-when-using-extended-thinking
 			claudeRequest.TopP = nil
 			claudeRequest.Temperature = common.GetPointer[float64](1.0)
@@ -227,7 +227,7 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 		}
 	}
 
-	// 指定了 reasoning 参数,覆盖 budgetTokens
+	// A reasoning parameter was specified, overriding budgetTokens.
 	if textRequest.Reasoning != nil {
 		var reasoning openrouter.RequestReasoning
 		if err := common.Unmarshal(textRequest.Reasoning, &reasoning); err != nil {
@@ -290,12 +290,12 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 
 	claudeMessages := make([]dto.ClaudeMessage, 0)
 	isFirstMessage := true
-	// 初始化system消息数组，用于累积多个system消息
+	// Initialize the system message array to accumulate multiple system messages.
 	var systemMessages []dto.ClaudeMediaMessage
 
 	for _, message := range formatMessages {
 		if message.Role == "system" {
-			// 根据Claude API规范，system字段使用数组格式更有通用性
+			// Per the Claude API spec, the system field is more universally compatible in array form.
 			if message.IsStringContent() {
 				if text := message.StringContent(); text != "" {
 					systemMessages = append(systemMessages, dto.ClaudeMediaMessage{
@@ -304,7 +304,7 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 					})
 				}
 			} else {
-				// 支持复合内容的system消息（虽然不常见，但需要考虑完整性）
+				// Support system messages with composite content (uncommon, but needed for completeness).
 				for _, ctx := range message.ParseContent() {
 					if ctx.Type == "text" && ctx.Text != "" {
 						systemMessages = append(systemMessages, dto.ClaudeMediaMessage{
@@ -312,7 +312,7 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 							Text: common.GetPointer[string](ctx.Text),
 						})
 					}
-					// 未来可以在这里扩展对图片等其他类型的支持
+					// Support for other content types such as images can be added here in the future.
 				}
 			}
 		} else {
@@ -429,7 +429,7 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 		}
 	}
 
-	// 设置累积的system消息
+	// Set the accumulated system messages.
 	if len(systemMessages) > 0 {
 		claudeRequest.System = systemMessages
 	}
@@ -460,7 +460,7 @@ func StreamResponseClaude2OpenAI(claudeResponse *dto.ClaudeResponse) *dto.ChatCo
 		choice.Delta.Role = "assistant"
 	} else if claudeResponse.Type == "content_block_start" {
 		if claudeResponse.ContentBlock != nil {
-			// 如果是文本块，尽可能发送首段文本（若存在）
+			// For a text block, send the first chunk of text as early as possible (if present).
 			if claudeResponse.ContentBlock.Type == "text" && claudeResponse.ContentBlock.Text != nil {
 				choice.Delta.SetContentString(*claudeResponse.ContentBlock.Text)
 			}
@@ -491,7 +491,7 @@ func StreamResponseClaude2OpenAI(claudeResponse *dto.ClaudeResponse) *dto.ChatCo
 					},
 				})
 			case "signature_delta":
-				// 加密的不处理
+				// Encrypted content is not processed.
 				signatureContent := "\n"
 				choice.Delta.ReasoningContent = &signatureContent
 			case "thinking_delta":
@@ -552,7 +552,7 @@ func ResponseClaude2OpenAI(claudeResponse *dto.ClaudeResponse) *dto.OpenAITextRe
 				},
 			})
 		case "thinking":
-			// 加密的不管， 只输出明文的推理过程
+			// Ignore encrypted content; only output the plaintext reasoning process.
 			if message.Thinking != nil {
 				thinkingContent = *message.Thinking
 			}
@@ -726,7 +726,7 @@ func FormatClaudeResponseInfo(claudeResponse *dto.ClaudeResponse, oaiResponse *d
 			claudeInfo.Model = claudeResponse.Message.Model
 		}
 
-		// message_start, 获取usage
+		// message_start: read the usage.
 		if claudeResponse.Message != nil && claudeResponse.Message.Usage != nil {
 			claudeInfo.Usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
 			claudeInfo.Usage.UsageSemantic = "anthropic"
@@ -746,11 +746,11 @@ func FormatClaudeResponseInfo(claudeResponse *dto.ClaudeResponse, oaiResponse *d
 			}
 		}
 	} else if claudeResponse.Type == "message_delta" {
-		// 最终的usage获取
+		// Read the final usage.
 		if claudeResponse.Usage != nil {
 			claudeInfo.Usage.UsageSemantic = "anthropic"
 			if claudeResponse.Usage.InputTokens > 0 {
-				// 不叠加，只取最新的
+				// Do not accumulate; keep only the latest value.
 				claudeInfo.Usage.PromptTokens = claudeResponse.Usage.InputTokens
 			}
 			if claudeResponse.Usage.CacheReadInputTokens > 0 {
@@ -771,7 +771,7 @@ func FormatClaudeResponseInfo(claudeResponse *dto.ClaudeResponse, oaiResponse *d
 			claudeInfo.Usage.TotalTokens = claudeInfo.Usage.PromptTokens + claudeInfo.Usage.CompletionTokens
 		}
 
-		// 判断是否完整
+		// Determine whether the response is complete.
 		claudeInfo.Done = true
 	} else if claudeResponse.Type == "content_block_start" {
 	} else {
@@ -805,13 +805,13 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 		FormatClaudeResponseInfo(&claudeResponse, nil, claudeInfo)
 
 		if claudeResponse.Type == "message_start" {
-			// message_start, 获取usage
+			// message_start: read the usage.
 			if claudeResponse.Message != nil {
 				info.UpstreamModelName = claudeResponse.Message.Model
 			}
 		} else if claudeResponse.Type == "message_delta" {
-			// 确保 message_delta 的 usage 包含完整的 input_tokens 和 cache 相关字段
-			// 解决 AWS Bedrock 等上游返回的 message_delta 缺少这些字段的问题
+			// Ensure message_delta usage contains the complete input_tokens and cache-related
+			// fields, fixing upstreams such as AWS Bedrock that omit them.
 			if !shouldSkipClaudeMessageDeltaUsagePatch(info) {
 				data = patchClaudeMessageDeltaUsageData(data, buildMessageDeltaPatchUsage(&claudeResponse, claudeInfo))
 			}
@@ -834,13 +834,14 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 
 func HandleStreamFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, claudeInfo *ClaudeResponseInfo) {
 	if claudeInfo.Usage.PromptTokens == 0 {
-		//上游出错
+		// Upstream error.
 	}
 	if claudeInfo.Usage.CompletionTokens == 0 || !claudeInfo.Done {
 		if common.DebugEnabled {
 			common.SysLog("claude response usage is not complete, maybe upstream error")
 		}
-		// 只补缺失字段，不整份覆盖——保留 message_start 已拿到的 cache 字段
+		// Fill in only the missing fields instead of overwriting everything -- keep the cache
+		// fields already captured from message_start.
 		fallback := service.ResponseText2Usage(c, claudeInfo.ResponseText.String(), info.UpstreamModelName, info.GetEstimatePromptTokens())
 		if claudeInfo.Usage.CompletionTokens == 0 ||
 			(!claudeInfo.Done && fallback.CompletionTokens > claudeInfo.Usage.CompletionTokens) {
@@ -962,7 +963,7 @@ func ClaudeHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayI
 func mapToolChoice(toolChoice any, parallelToolCalls *bool) *dto.ClaudeToolChoice {
 	var claudeToolChoice *dto.ClaudeToolChoice
 
-	// 处理 tool_choice 字符串值
+	// Handle the tool_choice string value.
 	if toolChoiceStr, ok := toolChoice.(string); ok {
 		switch toolChoiceStr {
 		case "auto":
@@ -979,7 +980,7 @@ func mapToolChoice(toolChoice any, parallelToolCalls *bool) *dto.ClaudeToolChoic
 			}
 		}
 	} else if toolChoiceMap, ok := toolChoice.(map[string]interface{}); ok {
-		// 处理 tool_choice 对象值
+		// Handle the tool_choice object value.
 		if function, ok := toolChoiceMap["function"].(map[string]interface{}); ok {
 			if toolName, ok := function["name"].(string); ok {
 				claudeToolChoice = &dto.ClaudeToolChoice{
@@ -990,10 +991,10 @@ func mapToolChoice(toolChoice any, parallelToolCalls *bool) *dto.ClaudeToolChoic
 		}
 	}
 
-	// 处理 parallel_tool_calls
+	// Handle parallel_tool_calls.
 	if parallelToolCalls != nil {
 		if claudeToolChoice == nil {
-			// 如果没有 tool_choice，但有 parallel_tool_calls，创建默认的 auto 类型
+			// If there is no tool_choice but parallel_tool_calls is present, create a default auto type.
 			claudeToolChoice = &dto.ClaudeToolChoice{
 				Type: "auto",
 			}
@@ -1002,7 +1003,7 @@ func mapToolChoice(toolChoice any, parallelToolCalls *bool) *dto.ClaudeToolChoic
 		// Anthropic schema: tool_choice.type=none does not accept extra fields.
 		// When tools are disabled, parallel_tool_calls is irrelevant, so we drop it.
 		if claudeToolChoice.Type != "none" {
-			// 如果 parallel_tool_calls 为 true，则 disable_parallel_tool_use 为 false
+			// If parallel_tool_calls is true, then disable_parallel_tool_use is false.
 			claudeToolChoice.DisableParallelToolUse = !*parallelToolCalls
 		}
 	}

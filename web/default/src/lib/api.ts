@@ -114,8 +114,8 @@ api.interceptors.response.use(
         /* empty */
       }
 
-      // 会话超时统一出口：跳转不受 skipErrorHandler 门控（getSelf 等请求
-      // 以 skipErrorHandler: true 发出，必须同样回到登录页），仅 toast 维持原门控
+      // Unified session-timeout exit: the redirect is not gated by skipErrorHandler (requests such as getSelf
+      // are sent with skipErrorHandler: true and must also return to the sign-in page); only the toast keeps the original gating
       const { pathname, search } = window.location
       const authPaths = ['/sign-in', '/sign-up', '/otp', '/oauth', '/setup']
       const onAuthPage = authPaths.some(

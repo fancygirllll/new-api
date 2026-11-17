@@ -68,7 +68,7 @@ type responseTask struct {
 }
 
 const (
-	// 即梦限制单个文件最大4.7MB https://www.volcengine.com/docs/85621/1747301
+	// Jimeng limits each file to 4.7MB: https://www.volcengine.com/docs/85621/1747301
 	MaxFileSize int64 = 4*1024*1024 + 700*1024 // 4.7MB (4MB + 724KB)
 )
 
@@ -130,7 +130,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 	if !ok {
 		return nil, fmt.Errorf("invalid request type in context")
 	}
-	// 支持openai sdk的图片上传方式
+	// Support the image upload style used by the OpenAI SDK.
 	if mf, err := c.MultipartForm(); err == nil {
 		if files, exists := mf.File["input_reference"]; exists && len(files) > 0 {
 			if len(files) == 1 {
@@ -139,13 +139,13 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 				info.Action = constant.TaskActionFirstTailGenerate
 			}
 
-			// 将上传的文件转换为base64格式
+			// Convert the uploaded files to base64.
 			var images []string
 
 			for _, fileHeader := range files {
-				// 检查文件大小
+				// Check the file size.
 				if fileHeader.Size > MaxFileSize {
-					return nil, fmt.Errorf("文件 %s 大小超过限制，最大允许 %d MB", fileHeader.Filename, MaxFileSize/(1024*1024))
+					return nil, fmt.Errorf("file %s exceeds the size limit of %d MB", fileHeader.Filename, MaxFileSize/(1024*1024))
 				}
 
 				file, err := fileHeader.Open()
@@ -157,7 +157,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 				if err != nil {
 					continue
 				}
-				// 将文件内容转换为base64
+				// Convert the file contents to base64.
 				base64Str := base64.StdEncoding.EncodeToString(fileBytes)
 				images = append(images, base64Str)
 			}
@@ -403,21 +403,21 @@ func (a *TaskAdaptor) convertToRequestPayload(req *relaycommon.TaskSubmitReq, in
 		return nil, errors.Wrap(err, "unmarshal metadata failed")
 	}
 
-	// 即梦视频3.0 ReqKey转换
+	// Jimeng Video 3.0 ReqKey conversion.
 	// https://www.volcengine.com/docs/85621/1792707
 	imageLen := lo.Max([]int{len(req.Images), len(r.BinaryDataBase64), len(r.ImageUrls)})
 	if strings.Contains(r.ReqKey, "jimeng_v30") {
 		if r.ReqKey == "jimeng_v30_pro" {
-			// 3.0 pro只有固定的jimeng_ti2v_v30_pro
+			// 3.0 pro only has the fixed jimeng_ti2v_v30_pro.
 			r.ReqKey = "jimeng_ti2v_v30_pro"
 		} else if imageLen > 1 {
-			// 多张图片：首尾帧生成
+			// Multiple images: first/last-frame generation.
 			r.ReqKey = strings.TrimSuffix(strings.Replace(r.ReqKey, "jimeng_v30", "jimeng_i2v_first_tail_v30", 1), "p")
 		} else if imageLen == 1 {
-			// 单张图片：图生视频
+			// Single image: image-to-video.
 			r.ReqKey = strings.TrimSuffix(strings.Replace(r.ReqKey, "jimeng_v30", "jimeng_i2v_first_v30", 1), "p")
 		} else {
-			// 无图片：文生视频
+			// No images: text-to-video.
 			r.ReqKey = strings.Replace(r.ReqKey, "jimeng_v30", "jimeng_t2v_v30", 1)
 		}
 	}

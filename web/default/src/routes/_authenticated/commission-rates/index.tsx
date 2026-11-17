@@ -23,9 +23,9 @@ import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 /**
- * 管理端佣金比例路由（D-06 单路由，无 $section/registry）。
- * beforeLoad 阈值式守卫（低于管理员角色 → /403，commission-withdrawals 页惯例）：
- * 前端守卫仅体验层，服务端 AdminAuth（api-router 路由层挂载）才是真防线。
+ * Admin commission-rate route (D-06 single route, no $section/registry).
+ * Threshold-based beforeLoad guard (below admin role → /403, the commission-withdrawals page convention):
+ * the frontend guard is UX-only; server-side AdminAuth (mounted at the api-router layer) is the real defense.
  */
 export const Route = createFileRoute('/_authenticated/commission-rates/')({
   beforeLoad: () => {

@@ -16,7 +16,7 @@ func requestOpenAI2Zhipu(request dto.GeneralOpenAIRequest) *dto.GeneralOpenAIReq
 					imageUrl := mediaMessage.GetImageMedia()
 					// check if base64
 					if strings.HasPrefix(imageUrl.Url, "data:image/") {
-						// 去除base64数据的URL前缀（如果有）
+						// Strip the URL prefix from base64 data (if present).
 						if idx := strings.Index(imageUrl.Url, ","); idx != -1 {
 							imageUrl.Url = imageUrl.Url[idx+1:]
 						}

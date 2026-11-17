@@ -124,7 +124,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 		taskResult = relaycommon.FailTaskInfo("upstream returned empty status")
 	}
 
-	// 记录原本的状态，防止重复退款
+	// Record the original status to prevent duplicate refunds
 	shouldRefund := false
 	quota := task.Quota
 	preStatus := task.Status
@@ -149,17 +149,17 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 			task.FailReason = taskResult.Url
 		}
 
-		// 如果返回了 total_tokens 并且配置了模型倍率(非固定价格),则重新计费
+		// If total_tokens is returned and a model ratio (non-fixed price) is configured, rebill
 		if taskResult.TotalTokens > 0 {
-			// 获取模型名称
+			// Get the model name
 			var taskData map[string]interface{}
 			if err := json.Unmarshal(task.Data, &taskData); err == nil {
 				if modelName, ok := taskData["model"].(string); ok && modelName != "" {
-					// 获取模型价格和倍率
+					// Get the model price and ratio
 					modelRatio, hasRatioSetting, _ := ratio_setting.GetModelRatio(modelName)
-					// 只有配置了倍率(非固定价格)时才按 token 重新计费
+					// Only rebill by tokens when a ratio (non-fixed price) is configured
 					if hasRatioSetting && modelRatio > 0 {
-						// 获取用户和组的倍率信息
+						// Get the user and group ratio info
 						group := task.Group
 						if group == "" {
 							user, err := model.GetUserById(task.UserId, false)
@@ -178,16 +178,16 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 								finalGroupRatio = groupRatio
 							}
 
-							// 计算实际应扣费额度: totalTokens * modelRatio * groupRatio
+							// Compute the actual quota to charge: totalTokens * modelRatio * groupRatio
 							actualQuota := int(float64(taskResult.TotalTokens) * modelRatio * finalGroupRatio)
 
-							// 计算差额
+							// Compute the difference
 							preConsumedQuota := task.Quota
 							quotaDelta := actualQuota - preConsumedQuota
 
 							if quotaDelta > 0 {
-								// 需要补扣费
-								logger.LogInfo(ctx, fmt.Sprintf("视频任务 %s 预扣费后补扣费：%s（实际消耗：%s，预扣费：%s，tokens：%d）",
+								// Additional charge required
+								logger.LogInfo(ctx, fmt.Sprintf("Video task %s charged extra after pre-charge: %s (actual usage: %s, pre-charged: %s, tokens: %d)",
 									task.TaskID,
 									logger.LogQuota(quotaDelta),
 									logger.LogQuota(actualQuota),
@@ -195,22 +195,22 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 									taskResult.TotalTokens,
 								))
 								if err := model.DecreaseUserQuota(task.UserId, quotaDelta, false); err != nil {
-									logger.LogError(ctx, fmt.Sprintf("补扣费失败: %s", err.Error()))
+									logger.LogError(ctx, fmt.Sprintf("Failed to charge the additional amount: %s", err.Error()))
 								} else {
 									model.UpdateUserUsedQuotaAndRequestCount(task.UserId, quotaDelta)
 									model.UpdateChannelUsedQuota(task.ChannelId, quotaDelta)
-									task.Quota = actualQuota // 更新任务记录的实际扣费额度
+									task.Quota = actualQuota // Update the task's actual charged quota
 
-									// 记录消费日志
-									logContent := fmt.Sprintf("视频任务成功补扣费，模型倍率 %.2f，分组倍率 %.2f，tokens %d，预扣费 %s，实际扣费 %s，补扣费 %s",
+									// Record the consumption log
+									logContent := fmt.Sprintf("Video task charged extra successfully: model ratio %.2f, group ratio %.2f, tokens %d, pre-charged %s, actual charge %s, extra charge %s",
 										modelRatio, finalGroupRatio, taskResult.TotalTokens,
 										logger.LogQuota(preConsumedQuota), logger.LogQuota(actualQuota), logger.LogQuota(quotaDelta))
 									model.RecordLog(task.UserId, model.LogTypeSystem, logContent)
 								}
 							} else if quotaDelta < 0 {
-								// 需要退还多扣的费用
+								// Refund the overcharged amount
 								refundQuota := -quotaDelta
-								logger.LogInfo(ctx, fmt.Sprintf("视频任务 %s 预扣费后返还：%s（实际消耗：%s，预扣费：%s，tokens：%d）",
+								logger.LogInfo(ctx, fmt.Sprintf("Video task %s refunded after pre-charge: %s (actual usage: %s, pre-charged: %s, tokens: %d)",
 									task.TaskID,
 									logger.LogQuota(refundQuota),
 									logger.LogQuota(actualQuota),
@@ -218,19 +218,19 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 									taskResult.TotalTokens,
 								))
 								if err := model.IncreaseUserQuota(task.UserId, refundQuota, false); err != nil {
-									logger.LogError(ctx, fmt.Sprintf("退还预扣费失败: %s", err.Error()))
+									logger.LogError(ctx, fmt.Sprintf("Failed to refund the pre-charged amount: %s", err.Error()))
 								} else {
-									task.Quota = actualQuota // 更新任务记录的实际扣费额度
+									task.Quota = actualQuota // Update the task's actual charged quota
 
-									// 记录退款日志
-									logContent := fmt.Sprintf("视频任务成功退还多扣费用，模型倍率 %.2f，分组倍率 %.2f，tokens %d，预扣费 %s，实际扣费 %s，退还 %s",
+									// Record the refund log
+									logContent := fmt.Sprintf("Video task refunded the overcharged amount successfully: model ratio %.2f, group ratio %.2f, tokens %d, pre-charged %s, actual charge %s, refunded %s",
 										modelRatio, finalGroupRatio, taskResult.TotalTokens,
 										logger.LogQuota(preConsumedQuota), logger.LogQuota(actualQuota), logger.LogQuota(refundQuota))
 									model.RecordLog(task.UserId, model.LogTypeSystem, logContent)
 								}
 							} else {
-								// quotaDelta == 0, 预扣费刚好准确
-								logger.LogInfo(ctx, fmt.Sprintf("视频任务 %s 预扣费准确（%s，tokens：%d）",
+								// quotaDelta == 0, the pre-charge was exactly accurate
+								logger.LogInfo(ctx, fmt.Sprintf("Video task %s pre-charge accurate (%s, tokens: %d)",
 									task.TaskID, logger.LogQuota(actualQuota), taskResult.TotalTokens))
 							}
 						}
@@ -267,7 +267,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 	}
 
 	if shouldRefund {
-		// 任务失败且之前状态不是失败才退还额度，防止重复退还
+		// Refund quota only when the task failed and the previous status was not failed, to prevent duplicate refunds
 		if err := model.IncreaseUserQuota(task.UserId, quota, false); err != nil {
 			logger.LogWarn(ctx, "Failed to increase user quota: "+err.Error())
 		}

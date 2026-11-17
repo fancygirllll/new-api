@@ -17,10 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * A8 超管账单调整单弹窗（RootAuth，v1.1 Round-2 Obs-1 补 UI 消费者）。
- * 仅 status=payable 账单可达（行内按钮门控 + 服务端白名单双保险）；
- * delta_cents 可负（正补负减，cents 直输无浮点）；服务端按账单当前累计
- * 重算 settle 金额（不信任客户端），失败信封 message 原样回显（rate-set-dialog 母本）。
+ * A8 super-admin statement adjustment dialog (RootAuth, v1.1 Round-2 Obs-1 adds the UI consumer).
+ * Reachable only for status=payable statements (inline button gating + server whitelist, double insurance);
+ * delta_cents may be negative (positive adds, negative subtracts; cents entered directly, no floats); the server recomputes
+ * the settle amount from the statement's current totals (never trusts the client), and the failure envelope message is echoed verbatim (modeled on rate-set-dialog).
  */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -35,13 +35,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { createStatementAdjustment, formatCents, type CommissionStatement } from '../api'
 
 interface StatementAdjustDialogProps {
-  /** 目标账单（null=关闭）；仅 payable 行可达 */
+  /** Target statement (null=closed); reachable only from payable rows */
   statement: CommissionStatement | null
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-/** A8 弹窗：展示 period + 当前结算额 + delta_cents（可负）+ reason 必填 */
+/** A8 dialog: shows period + current settle amount + delta_cents (may be negative) + required reason */
 export function StatementAdjustDialog({
   statement,
   onOpenChange,
@@ -59,7 +59,7 @@ export function StatementAdjustDialog({
     setError('')
   }
 
-  // 切换目标账单或重新打开时清空（复用同一实例，不重置会把 A 账单输入错挂到 B）
+  // Clear when switching the target statement or reopening (the same instance is reused; without a reset, statement A's input would attach to B)
   useEffect(() => {
     setDeltaCents('')
     setReason('')
@@ -86,7 +86,7 @@ export function StatementAdjustDialog({
     setSubmitting(true)
     setError('')
     try {
-      // A8 冻结形状两字段逐字：delta_cents 可负，服务端重算 settle
+      // A8 frozen shape, two fields verbatim: delta_cents may be negative; the server recomputes settle
       const res = await createStatementAdjustment(
         statement.id,
         deltaNum,

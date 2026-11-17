@@ -172,11 +172,11 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	if a.RequestMode == RequestModeGemini {
 		if model_setting.GetGeminiSettings().ThinkingAdapterEnabled &&
 			!model_setting.ShouldPreserveThinkingSuffix(info.OriginModelName) {
-			// 新增逻辑：处理 -thinking-<budget> 格式
+			// New logic: handle the -thinking-<budget> format.
 			if strings.Contains(info.UpstreamModelName, "-thinking-") {
 				parts := strings.Split(info.UpstreamModelName, "-thinking-")
 				info.UpstreamModelName = parts[0]
-			} else if strings.HasSuffix(info.UpstreamModelName, "-thinking") { // 旧的适配
+			} else if strings.HasSuffix(info.UpstreamModelName, "-thinking") { // Legacy adaptation
 				info.UpstreamModelName = strings.TrimSuffix(info.UpstreamModelName, "-thinking")
 			} else if strings.HasSuffix(info.UpstreamModelName, "-nothinking") {
 				info.UpstreamModelName = strings.TrimSuffix(info.UpstreamModelName, "-nothinking")

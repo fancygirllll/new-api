@@ -39,7 +39,7 @@ export interface UserProfile {
   username: string
   /** Display name */
   display_name: string
-  /** User role (1=普通用户, 10=管理员, 100=超级管理员) */
+  /** User role (1=regular user, 10=admin, 100=super admin) */
   role: number
   /** Email address */
   email?: string
@@ -51,7 +51,7 @@ export interface UserProfile {
   used_quota: number
   /** Total request count */
   request_count: number
-  /** Account status (1=启用, 2=禁用, 3=待审核, 4=已删除) */
+  /** Account status (1=enabled, 2=disabled, 3=pending review, 4=deleted) */
   status: number
   /** Access token (system token) */
   access_token?: string
@@ -65,7 +65,7 @@ export interface UserProfile {
   aff_history_quota: number
   /** Invite user ID */
   invite_user_id?: number
-  /** Attribution info (契约 §4.1 M2)：归属信息，rebind_available 由服务端计算，前端只读 */
+  /** Attribution info (contract §4.1 M2): attribution details; rebind_available is computed server-side and read-only on the frontend */
   attribution?: { inviter_id: number; rebind_available: boolean }
   /** Account creation timestamp */
   created_time: number

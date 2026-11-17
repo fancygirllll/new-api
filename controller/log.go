@@ -55,19 +55,19 @@ func GetUserLogs(c *gin.Context) {
 	return
 }
 
-// Deprecated: SearchAllLogs 已废弃，前端未使用该接口。
+// Deprecated: SearchAllLogs is deprecated; the frontend no longer uses this endpoint.
 func SearchAllLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": false,
-		"message": "该接口已废弃",
+		"message": "This endpoint is deprecated",
 	})
 }
 
-// Deprecated: SearchUserLogs 已废弃，前端未使用该接口。
+// Deprecated: SearchUserLogs is deprecated; the frontend no longer uses this endpoint.
 func SearchUserLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": false,
-		"message": "该接口已废弃",
+		"message": "This endpoint is deprecated",
 	})
 }
 
@@ -76,7 +76,7 @@ func GetLogByKey(c *gin.Context) {
 	if tokenId == 0 {
 		c.JSON(200, gin.H{
 			"success": false,
-			"message": "无效的令牌",
+			"message": "Invalid token",
 		})
 		return
 	}

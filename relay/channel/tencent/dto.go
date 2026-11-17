@@ -6,40 +6,40 @@ type TencentMessage struct {
 }
 
 type TencentChatRequest struct {
-	// 模型名称，可选值包括 hunyuan-lite、hunyuan-standard、hunyuan-standard-256K、hunyuan-pro。
-	// 各模型介绍请阅读 [产品概述](https://cloud.tencent.com/document/product/1729/104753) 中的说明。
+	// Model name; supported values include hunyuan-lite, hunyuan-standard, hunyuan-standard-256K, hunyuan-pro.
+	// See the [product overview](https://cloud.tencent.com/document/product/1729/104753) for details on each model.
 	//
-	// 注意：
-	// 不同的模型计费不同，请根据 [购买指南](https://cloud.tencent.com/document/product/1729/97731) 按需调用。
+	// Note:
+	// Billing differs by model; see the [purchase guide](https://cloud.tencent.com/document/product/1729/97731) and call as needed.
 	Model *string `json:"Model"`
-	// 聊天上下文信息。
-	// 说明：
-	// 1. 长度最多为 40，按对话时间从旧到新在数组中排列。
-	// 2. Message.Role 可选值：system、user、assistant。
-	// 其中，system 角色可选，如存在则必须位于列表的最开始。user 和 assistant 需交替出现（一问一答），以 user 提问开始和结束，且 Content 不能为空。Role 的顺序示例：[system（可选） user assistant user assistant user ...]。
-	// 3. Messages 中 Content 总长度不能超过模型输入长度上限（可参考 [产品概述](https://cloud.tencent.com/document/product/1729/104753) 文档），超过则会截断最前面的内容，只保留尾部内容。
+	// Chat context.
+	// Notes:
+	// 1. At most 40 entries, ordered from oldest to newest.
+	// 2. Message.Role can be system, user, or assistant.
+	// The system role is optional and, if present, must be first. user and assistant must alternate (question/answer), starting and ending with user, and Content must not be empty. Example Role order: [system (optional) user assistant user assistant user ...].
+	// 3. The total Content length in Messages must not exceed the model's input limit (see the [product overview](https://cloud.tencent.com/document/product/1729/104753)); otherwise the leading content is truncated and only the tail is kept.
 	Messages []*TencentMessage `json:"Messages"`
-	// 流式调用开关。
-	// 说明：
-	// 1. 未传值时默认为非流式调用（false）。
-	// 2. 流式调用时以 SSE 协议增量返回结果（返回值取 Choices[n].Delta 中的值，需要拼接增量数据才能获得完整结果）。
-	// 3. 非流式调用时：
-	// 调用方式与普通 HTTP 请求无异。
-	// 接口响应耗时较长，**如需更低时延建议设置为 true**。
-	// 只返回一次最终结果（返回值取 Choices[n].Message 中的值）。
+	// Streaming switch.
+	// Notes:
+	// 1. Defaults to non-streaming (false) when unset.
+	// 2. In streaming mode results are returned incrementally over SSE (take values from Choices[n].Delta and concatenate them to get the full result).
+	// 3. In non-streaming mode:
+	// The call behaves like a normal HTTP request.
+	// Responses take longer; **set this to true if you need lower latency**.
+	// The final result is returned once (take values from Choices[n].Message).
 	//
-	// 注意：
-	// 通过 SDK 调用时，流式和非流式调用需用**不同的方式**获取返回值，具体参考 SDK 中的注释或示例（在各语言 SDK 代码仓库的 examples/hunyuan/v20230901/ 目录中）。
+	// Note:
+	// When calling via an SDK, streaming and non-streaming use **different ways** to read the result; see the SDK comments or examples (under examples/hunyuan/v20230901/ in each language SDK repository).
 	Stream *bool `json:"Stream,omitempty"`
-	// 说明：
-	// 1. 影响输出文本的多样性，取值越大，生成文本的多样性越强。
-	// 2. 取值区间为 [0.0, 1.0]，未传值时使用各模型推荐值。
-	// 3. 非必要不建议使用，不合理的取值会影响效果。
+	// Notes:
+	// 1. Affects the diversity of the output text; higher values produce more diverse text.
+	// 2. Range [0.0, 1.0]; the per-model recommended value is used when unset.
+	// 3. Not recommended unless necessary; unreasonable values degrade quality.
 	TopP *float64 `json:"TopP,omitempty"`
-	// 说明：
-	// 1. 较高的数值会使输出更加随机，而较低的数值会使其更加集中和确定。
-	// 2. 取值区间为 [0.0, 2.0]，未传值时使用各模型推荐值。
-	// 3. 非必要不建议使用，不合理的取值会影响效果。
+	// Notes:
+	// 1. Higher values make the output more random; lower values make it more focused and deterministic.
+	// 2. Range [0.0, 2.0]; the per-model recommended value is used when unset.
+	// 3. Not recommended unless necessary; unreasonable values degrade quality.
 	Temperature *float64 `json:"Temperature,omitempty"`
 }
 
@@ -55,19 +55,19 @@ type TencentUsage struct {
 }
 
 type TencentResponseChoices struct {
-	FinishReason string         `json:"FinishReason,omitempty"` // 流式结束标志位，为 stop 则表示尾包
-	Messages     TencentMessage `json:"Message,omitempty"`      // 内容，同步模式返回内容，流模式为 null 输出 content 内容总数最多支持 1024token。
-	Delta        TencentMessage `json:"Delta,omitempty"`        // 内容，流模式返回内容，同步模式为 null 输出 content 内容总数最多支持 1024token。
+	FinishReason string         `json:"FinishReason,omitempty"` // Streaming end marker; "stop" indicates the final packet
+	Messages     TencentMessage `json:"Message,omitempty"`      // Content returned in synchronous mode; in streaming mode it is null; content is limited to 1024 tokens.
+	Delta        TencentMessage `json:"Delta,omitempty"`        // Content returned in streaming mode; in synchronous mode it is null; content is limited to 1024 tokens.
 }
 
 type TencentChatResponse struct {
-	Choices []TencentResponseChoices `json:"Choices,omitempty"` // 结果
-	Created int64                    `json:"Created,omitempty"` // unix 时间戳的字符串
-	Id      string                   `json:"Id,omitempty"`      // 会话 id
-	Usage   TencentUsage             `json:"Usage,omitempty"`   // token 数量
-	Error   TencentError             `json:"Error,omitempty"`   // 错误信息 注意：此字段可能返回 null，表示取不到有效值
-	Note    string                   `json:"Note,omitempty"`    // 注释
-	ReqID   string                   `json:"Req_id,omitempty"`  // 唯一请求 Id，每次请求都会返回。用于反馈接口入参
+	Choices []TencentResponseChoices `json:"Choices,omitempty"` // Results
+	Created int64                    `json:"Created,omitempty"` // Unix timestamp as a string
+	Id      string                   `json:"Id,omitempty"`      // Session ID
+	Usage   TencentUsage             `json:"Usage,omitempty"`   // Token counts
+	Error   TencentError             `json:"Error,omitempty"`   // Error information; note this field may be null
+	Note    string                   `json:"Note,omitempty"`    // Notes
+	ReqID   string                   `json:"Req_id,omitempty"`  // Unique request ID, returned on every request; used for feedback on request parameters
 }
 
 type TencentChatResponseSB struct {

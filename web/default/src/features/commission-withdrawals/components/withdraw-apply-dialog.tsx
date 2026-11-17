@@ -17,12 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * 提现申请/操作弹窗组（Phase 5 首个 features 层写操作表单，容器一律 Dialog 封装）。
- * - 申请确认：按单全额（D-08），正文展示 period + settle_amount_cents，无金额输入面
- * - 驳回弹窗：reason 必填（前端空值拦截 + 服务端 400 信封 message 回显双保险）
- * - 批准确认：无表单确认（展示单号与金额，Q1=B reviewing→approved）
- * - 打款登记弹窗：voucher_no 必填（展示 settle_amount 全额提示，Q1=B approved→paid）
- * 错误回显：信封 success=false message 展示（全局拦截器同步 toast 为既有现状语义）。
+ * Withdrawal application/action dialog group (the first features-layer write-operation form in Phase 5; all containers use Dialog).
+ * - Apply confirmation: full amount per statement (D-08); body shows period + settle_amount_cents, no amount input
+ * - Reject dialog: reason required (frontend empty check + server 400 envelope message echo, double insurance)
+ * - Approve confirmation: no form (shows the withdrawal number and amount, Q1=B reviewing→approved)
+ * - Mark-paid dialog: voucher_no required (shows the full settle_amount hint, Q1=B approved→paid)
+ * Error echo: display the envelope message when success=false (the global interceptor's toast is the existing behavior).
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -44,14 +44,14 @@ import {
 import type { CommissionStatement } from '@/features/commission-statements/api'
 
 interface WithdrawApplyDialogProps {
-  /** 目标账单（null=关闭）；正文展示 period + 全额，无金额输入（D-08） */
+  /** Target statement (null=closed); body shows period + full amount, no amount input (D-08) */
   statement: CommissionStatement | null
   onOpenChange: (open: boolean) => void
-  /** 申请成功后回调（调用方刷新账单表 + 提现记录表） */
+  /** Success callback (the caller refreshes the statement table + withdrawal records table) */
   onSuccess?: () => void
 }
 
-/** 申请全额确认对话框（A15）：确认即 POST /api/commission/withdrawals */
+/** Full-amount confirmation dialog (A15): confirming POSTs /api/commission/withdrawals */
 export function WithdrawApplyDialog({
   statement,
   onOpenChange,
@@ -122,13 +122,13 @@ export function WithdrawApplyDialog({
 }
 
 interface WithdrawRejectDialogProps {
-  /** 目标提现单（null=关闭）；仅 reviewing 可达（Q2=B 门控由按钮状态保证） */
+  /** Target withdrawal (null=closed); reachable only from reviewing (Q2=B gating is guaranteed by the button state) */
   withdrawal: Withdrawal | null
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-/** 驳回弹窗（A19）：reason 必填，服务端信封 message 回显双保险 */
+/** Reject dialog (A19): reason required; echoes the server envelope message as double insurance */
 export function WithdrawRejectDialog({
   withdrawal,
   onOpenChange,
@@ -200,13 +200,13 @@ export function WithdrawRejectDialog({
 }
 
 interface WithdrawApproveDialogProps {
-  /** 目标提现单（null=关闭）；仅 reviewing 可达（Q1=B） */
+  /** Target withdrawal (null=closed); reachable only from reviewing (Q1=B) */
   withdrawal: Withdrawal | null
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-/** 批准确认弹窗（A20）：无表单，展示单号与金额；账单保持 withdrawing */
+/** Approve confirmation dialog (A20): no form, shows the withdrawal number and amount; the statement stays withdrawing */
 export function WithdrawApproveDialog({
   withdrawal,
   onOpenChange,
@@ -275,13 +275,13 @@ export function WithdrawApproveDialog({
 }
 
 interface WithdrawMarkPaidDialogProps {
-  /** 目标提现单（null=关闭）；仅 approved 可达（Q1=B） */
+  /** Target withdrawal (null=closed); reachable only from approved (Q1=B) */
   withdrawal: Withdrawal | null
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-/** 打款登记弹窗（A21）：voucher_no 必填，展示 settle_amount 全额提示 */
+/** Mark-paid dialog (A21): voucher_no required, shows the full settle_amount hint */
 export function WithdrawMarkPaidDialog({
   withdrawal,
   onOpenChange,

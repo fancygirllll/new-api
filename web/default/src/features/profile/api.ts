@@ -61,9 +61,9 @@ export async function updateUserSettings(
 }
 
 /**
- * Self-rebind attribution to a distributor (契约 §4.2 B1)
+ * Self-rebind attribution to a distributor (contract §4.2 B1)
  * POST /api/user/aff_rebind
- * 错误由调用方映射：400 码无效/非分销商/已归属，403 超窗口（skip 全局 toast，避免双重提示）
+ * Errors are mapped by the caller: 400 invalid code / not a distributor / already attributed, 403 window exceeded (skip the global toast to avoid duplicate prompts)
  */
 export async function postAffRebind(
   data: { aff_code: string }

@@ -17,11 +17,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * A7 超管人工补录/冲销流水弹窗（RootAuth，v1.1 Round-2 Obs-1 补 UI 消费者）。
- * 前端仅做必填空值拦截与整数校验（体验层）；服务端校验链
- * （reason 必填 / flow_type 白名单 / 目标角色精确判定 / amount 恒正）是唯一业务防线，
- * 失败信封 message 原样回显、零改写（rate-set-dialog 母本）。
- * 金额输入为 cents 直输（域纪律：全链路 int64 cents，无浮点运算——api.ts 头注）。
+ * A7 super-admin manual credit/reversal flow dialog (RootAuth, v1.1 Round-2 Obs-1 adds the UI consumer).
+ * The frontend only blocks empty required fields and validates integers (UX layer); the server validation chain
+ * (required reason / flow_type whitelist / exact target role check / amount always positive) is the only business defense;
+ * the failure envelope message is echoed verbatim with no rewriting (modeled on rate-set-dialog).
+ * Amounts are entered directly in cents (domain discipline: int64 cents throughout, no float arithmetic--see the api.ts header).
  */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -49,7 +49,7 @@ interface ManualFlowDialogProps {
   onSuccess?: () => void
 }
 
-/** A7 弹窗：分销商 ID + 类型（补录/冲销）+ 金额（cents 恒正）+ reason 必填 */
+/** A7 dialog: distributor ID + type (credit/reversal) + amount (cents, always positive) + required reason */
 export function ManualFlowDialog({
   open,
   onOpenChange,
@@ -71,7 +71,7 @@ export function ManualFlowDialog({
     setError('')
   }
 
-  // 打开时清空（每次提交独立一笔，无预填场景）
+  // Clear on open (each submission is a separate entry; no prefill scenario)
   useEffect(() => {
     if (!open) return
     setDistributorId('')
@@ -110,7 +110,7 @@ export function ManualFlowDialog({
     setSubmitting(true)
     setError('')
     try {
-      // A7 冻结形状四字段逐字：amount_cents 恒正（debit 落库取负由服务端处理）
+      // A7 frozen shape, four fields verbatim: amount_cents is always positive (the server stores debit as negative)
       const res = await createManualFlow(idNum, flowType, amountNum, trimmedReason)
       if (res.success) {
         toast.success(t('Manual flow created'))

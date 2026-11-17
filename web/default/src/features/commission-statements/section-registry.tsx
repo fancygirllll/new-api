@@ -19,14 +19,14 @@ For commercial licensing, please contact support@quantumnous.com
 import { createSectionRegistry } from '@/features/system-settings/utils/section-registry'
 
 /**
- * 对账单页 section 定义（契约附录 D4 最小只读范围：list + summary 两节即全部，
- * 无调账 UI/无导出——A7/A8 调账面归 04-03 且契约不冻结其 UI）
+ * Statement page section definitions (contract appendix D4 minimal read-only scope: list + summary are everything,
+ * no adjustment UI / no export--the A7/A8 adjustment UI belongs to 04-03 and the contract does not freeze it)
  */
 const COMMISSION_STATEMENTS_SECTIONS = [
   {
     id: 'list',
     titleKey: 'Statement List',
-    build: () => null, // 内容由 feature index.tsx 渲染（含详情展开态，需组件内状态）
+    build: () => null, // Content is rendered by the feature index.tsx (including the expanded detail state, which needs component state)
   },
   {
     id: 'summary',

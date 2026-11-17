@@ -28,19 +28,19 @@ import { setCommissionRate, type CommissionRateRow } from '../api'
 
 interface RateSetDialogProps {
   open: boolean
-  /** edit=行内预填（A2 upsert 更新语义）；create=按分销商 ID 首次新建（D-11 双模式） */
+  /** edit=prefill from the row (A2 upsert update semantics); create=create for the first time by distributor ID (D-11 dual mode) */
   mode: 'edit' | 'create'
-  /** edit 模式的目标行；create 模式传 null */
+  /** Target row in edit mode; null in create mode */
   row: CommissionRateRow | null
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
 /**
- * 比例设置弹窗（A2 PUT，D-11 双模式：行内编辑 + 按 ID 新设）。
- * 前端仅做必填空值拦截与非负整数提示（体验层）；服务端校验链
- * （路径参数解析 400 / 万分比 0~10000 / role=5 精确匹配）是唯一业务防线，
- * 失败信封 message 原样回显、零改写。
+ * Rate setting dialog (A2 PUT, D-11 dual mode: inline edit + create by ID).
+ * The frontend only blocks empty required fields and hints non-negative integers (UX layer); the server validation chain
+ * (path parameter parsing 400 / basis points 0~10000 / exact role=5 match) is the only business defense,
+ * and the failure envelope message is echoed verbatim with no rewriting.
  */
 export function RateSetDialog({
   open,
@@ -55,7 +55,7 @@ export function RateSetDialog({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // 打开时预填：edit 取行数据；create 清空走首次新建（A2 upsert 服务端兜底防错绑）
+  // Prefill on open: edit uses the row data; create clears the form for first-time creation (A2 upsert, server-side check prevents misbinding)
   useEffect(() => {
     if (!open) return
     setError('')

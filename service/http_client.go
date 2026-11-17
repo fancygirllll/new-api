@@ -71,7 +71,7 @@ func GetHttpClientWithProxy(proxyURL string) (*http.Client, error) {
 	return NewProxyHttpClient(proxyURL)
 }
 
-// ResetProxyClientCache 清空代理客户端缓存，确保下次使用时重新初始化
+// ResetProxyClientCache clears the proxy client cache so it is reinitialized on next use
 func ResetProxyClientCache() {
 	proxyClientLock.Lock()
 	defer proxyClientLock.Unlock()
@@ -83,7 +83,7 @@ func ResetProxyClientCache() {
 	proxyClients = make(map[string]*http.Client)
 }
 
-// NewProxyHttpClient 创建支持代理的 HTTP 客户端
+// NewProxyHttpClient creates an HTTP client that supports proxies
 func NewProxyHttpClient(proxyURL string) (*http.Client, error) {
 	if proxyURL == "" {
 		if client := GetHttpClient(); client != nil {
@@ -127,7 +127,7 @@ func NewProxyHttpClient(proxyURL string) (*http.Client, error) {
 		return client, nil
 
 	case "socks5", "socks5h":
-		// 获取认证信息
+		// Get authentication info
 		var auth *proxy.Auth
 		if parsedURL.User != nil {
 			auth = &proxy.Auth{
@@ -139,8 +139,8 @@ func NewProxyHttpClient(proxyURL string) (*http.Client, error) {
 			}
 		}
 
-		// 创建 SOCKS5 代理拨号器
-		// proxy.SOCKS5 使用 tcp 参数，所有 TCP 连接包括 DNS 查询都将通过代理进行。行为与 socks5h 相同
+		// Create the SOCKS5 proxy dialer
+		// proxy.SOCKS5 uses TCP, so all TCP connections including DNS lookups go through the proxy. Behaves like socks5h
 		dialer, err := proxy.SOCKS5("tcp", parsedURL.Host, auth, proxy.Direct)
 		if err != nil {
 			return nil, err

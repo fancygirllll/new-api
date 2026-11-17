@@ -17,10 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * B5 客户充值明细弹层（CUST-02）。
- * 金额单位纪律（Pitfall 10/T-06-02-04）：TopUp.money 为 float 元（model/topup.go），
- * 直显两位小数，禁走分为单位的展示换算入口——单位混用即金额放大百倍。
- * 状态五值走常量映射渲染，禁透传服务端字符串（T-06-02-03）。
+ * B5 customer topup detail dialog (CUST-02).
+ * Amount-unit discipline (Pitfall 10/T-06-02-04): TopUp.money is float yuan (model/topup.go),
+ * shown directly with two decimals; never use the cents-based display conversion entry--mixing units inflates the amount 100x.
+ * The five statuses render through the constant mapping; never pass through server strings (T-06-02-03).
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -50,12 +50,12 @@ import {
 const TOPUP_PAGE_SIZE = 10
 
 interface CustomerTopupsDialogProps {
-  /** 目标客户（null=关闭） */
+  /** Target customer (null=closed) */
   customer: DistributorCustomerRow | null
   onOpenChange: (open: boolean) => void
 }
 
-/** 充值状态徽标（映射表命中才渲染，未知值显示占位符不透传服务端字符串） */
+/** Topup status badge (renders only on a mapping hit; unknown values show a placeholder instead of the server string) */
 function TopupStatusBadge({ status }: { status: string }) {
   const { t } = useTranslation()
   const labelKey = TOPUP_STATUS_LABEL_KEYS[status as TopupStatus]
@@ -67,7 +67,7 @@ function TopupStatusBadge({ status }: { status: string }) {
   )
 }
 
-/** 客户充值明细分页弹层（列：充值单号/金额/状态/到账时间） */
+/** Customer topup detail paginated dialog (columns: topup order no./amount/status/completed time) */
 export function CustomerTopupsDialog({
   customer,
   onOpenChange,
@@ -79,7 +79,7 @@ export function CustomerTopupsDialog({
   const [loading, setLoading] = useState(false)
   const customerId = customer?.id
 
-  // 切换客户时回到第一页
+  // Return to the first page when switching customers
   useEffect(() => {
     setPage(1)
   }, [customerId])
@@ -137,7 +137,7 @@ export function CustomerTopupsDialog({
               rows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className='font-mono'>{row.trade_no}</TableCell>
-                  {/* money 为 float 元直显两位小数（非分单位，禁分换算） */}
+                  {/* money is float yuan shown directly with two decimals (not cents; never use the cents conversion) */}
                   <TableCell>{row.money.toFixed(2)}</TableCell>
                   <TableCell>
                     <TopupStatusBadge status={row.status} />

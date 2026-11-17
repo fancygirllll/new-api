@@ -8,7 +8,7 @@ import (
 
 var Chats = []map[string]string{
 	//{
-	//	"ChatGPT Next Web 官方示例": "https://app.nextchat.dev/#/?settings={\"key\":\"{key}\",\"url\":\"{address}\"}",
+	//	"ChatGPT Next Web official example": "https://app.nextchat.dev/#/?settings={\"key\":\"{key}\",\"url\":\"{address}\"}",
 	//},
 	{
 		"Cherry Studio": "cherrystudio://providers/api-keys?v=1&data={cherryConfig}",
@@ -20,8 +20,8 @@ var Chats = []map[string]string{
 		"Fluent Read": "fluentread",
 	},
 	{
-		// CC Switch 官方深链协议 V1（原默认值 "ccswitch" 不是合法 scheme，
-		// 会被浏览器当作相对路径。文档：https://ccswitch.co/docs/faq-deeplink.html）
+		// CC Switch official deep link protocol V1 (the former default "ccswitch" was not a valid scheme,
+		// so browsers treated it as a relative path. Docs: https://ccswitch.co/docs/faq-deeplink.html)
 		"CC Switch": "ccswitch://v1/import?resource=provider&app=claude&name=New%20API&endpoint={address}&apiKey={key}",
 	},
 	{

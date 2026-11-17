@@ -7,28 +7,28 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// FundingSource — 资金来源接口（钱包 or 订阅）
+// FundingSource - funding source interface (wallet or subscription)
 // ---------------------------------------------------------------------------
 
-// FundingSource 抽象了预扣费的资金来源。
+// FundingSource abstracts the funding source for pre-consumption.
 type FundingSource interface {
-	// Source 返回资金来源标识："wallet" 或 "subscription"
+	// Source returns the funding source identifier: "wallet" or "subscription"
 	Source() string
-	// PreConsume 从该资金来源预扣 amount 额度
+	// PreConsume reserves the given amount from this funding source
 	PreConsume(amount int) error
-	// Settle 根据差额调整资金来源（正数补扣，负数退还）
+	// Settle adjusts the funding source by the difference (positive charge, negative refund)
 	Settle(delta int) error
-	// Refund 退还所有预扣费
+	// Refund returns all pre-consumed quota
 	Refund() error
 }
 
 // ---------------------------------------------------------------------------
-// WalletFunding — 钱包资金来源实现
+// WalletFunding - wallet funding source implementation
 // ---------------------------------------------------------------------------
 
 type WalletFunding struct {
 	userId   int
-	consumed int // 实际预扣的用户额度
+	consumed int // Actually pre-consumed user quota
 }
 
 func (w *WalletFunding) Source() string { return BillingSourceWallet }
@@ -58,23 +58,23 @@ func (w *WalletFunding) Refund() error {
 	if w.consumed <= 0 {
 		return nil
 	}
-	// IncreaseUserQuota 是 quota += N 的非幂等操作，不能重试，否则会多退额度。
-	// 订阅的 RefundSubscriptionPreConsume 有 requestId 幂等保护所以可以重试。
+	// IncreaseUserQuota is a non-idempotent quota += N operation and must not be retried, or the refund would be duplicated.
+	// The subscription RefundSubscriptionPreConsume is idempotent via requestId, so it can be retried.
 	return model.IncreaseUserQuota(w.userId, w.consumed, false)
 }
 
 // ---------------------------------------------------------------------------
-// SubscriptionFunding — 订阅资金来源实现
+// SubscriptionFunding - subscription funding source implementation
 // ---------------------------------------------------------------------------
 
 type SubscriptionFunding struct {
 	requestId      string
 	userId         int
 	modelName      string
-	amount         int64 // 预扣的订阅额度（subConsume）
+	amount         int64 // Pre-consumed subscription quota (subConsume)
 	subscriptionId int
 	preConsumed    int64
-	// 以下字段在 PreConsume 成功后填充，供 RelayInfo 同步使用
+	// The fields below are filled after PreConsume succeeds and used to sync RelayInfo
 	AmountTotal     int64
 	AmountUsedAfter int64
 	PlanId          int
@@ -84,7 +84,7 @@ type SubscriptionFunding struct {
 func (s *SubscriptionFunding) Source() string { return BillingSourceSubscription }
 
 func (s *SubscriptionFunding) PreConsume(_ int) error {
-	// amount 参数被忽略，使用内部 s.amount（已在构造时根据 preConsumedQuota 计算）
+	// The amount argument is ignored; internal s.amount is used (computed from preConsumedQuota at construction time)
 	res, err := model.PreConsumeUserSubscription(s.requestId, s.userId, s.modelName, 0, s.amount)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (s *SubscriptionFunding) PreConsume(_ int) error {
 	s.preConsumed = res.PreConsumed
 	s.AmountTotal = res.AmountTotal
 	s.AmountUsedAfter = res.AmountUsedAfter
-	// 获取订阅计划信息
+	// Fetch the subscription plan info
 	if planInfo, err := model.GetSubscriptionPlanInfoByUserSubscriptionId(res.UserSubscriptionId); err == nil && planInfo != nil {
 		s.PlanId = planInfo.PlanId
 		s.PlanTitle = planInfo.PlanTitle
@@ -117,7 +117,7 @@ func (s *SubscriptionFunding) Refund() error {
 	})
 }
 
-// refundWithRetry 尝试多次执行退款操作以提高成功率，只能用于基于事务的退款函数！！！！！！
+// refundWithRetry retries the refund operation for a higher success rate; only usable for transaction-based refund functions
 // try to refund with retries, only for refund functions based on transactions!!!
 func refundWithRetry(fn func() error) error {
 	if fn == nil {

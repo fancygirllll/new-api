@@ -119,9 +119,9 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	var toolCount int
 	var usage = &dto.Usage{}
 	var lastStreamData string
-	var secondLastStreamData string // 存储倒数第二个stream data，用于音频模型
+	var secondLastStreamData string // Holds the second-to-last stream data, used for audio models
 
-	// 检查是否为音频模型
+	// Check whether this is an audio model.
 	isAudioModel := strings.Contains(strings.ToLower(model), "audio")
 
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
@@ -132,7 +132,7 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 			}
 		}
 		if len(data) > 0 {
-			// 对音频模型，保存倒数第二个stream data
+			// For audio models, save the second-to-last stream data.
 			if isAudioModel && lastStreamData != "" {
 				secondLastStreamData = lastStreamData
 			}
@@ -145,7 +145,7 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 		}
 	})
 
-	// 对音频模型，从倒数第二个stream data中提取usage信息
+	// For audio models, extract usage information from the second-to-last stream data.
 	if isAudioModel && secondLastStreamData != "" {
 		var streamResp struct {
 			Usage *dto.Usage `json:"usage"`
@@ -163,7 +163,7 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 		}
 	}
 
-	// 处理最后的响应
+	// Handle the final response.
 	shouldSendLastResp := true
 	if err := handleLastResponse(lastStreamData, &responseId, &createAt, &systemFingerprint, &model, &usage,
 		&containStreamUsage, info, &shouldSendLastResp); err != nil {
@@ -199,7 +199,7 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 	logger.LogDebug(c, "upstream response body: %s", responseBody)
 	// Unmarshal to simpleResponse
 	if info.ChannelType == constant.ChannelTypeOpenRouter && info.ChannelOtherSettings.IsOpenRouterEnterprise() {
-		// 尝试解析为 openrouter enterprise
+		// Try to parse it as openrouter enterprise.
 		var enterpriseResponse openrouter.OpenRouterEnterpriseResponse
 		err = common.Unmarshal(responseBody, &enterpriseResponse)
 		if err != nil {

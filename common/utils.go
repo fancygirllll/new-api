@@ -165,26 +165,26 @@ func Bytes2Size(num int64) string {
 
 func Seconds2Time(num int) (time string) {
 	if num/31104000 > 0 {
-		time += strconv.Itoa(num/31104000) + " 年 "
+		time += strconv.Itoa(num/31104000) + " year(s) "
 		num %= 31104000
 	}
 	if num/2592000 > 0 {
-		time += strconv.Itoa(num/2592000) + " 个月 "
+		time += strconv.Itoa(num/2592000) + " month(s) "
 		num %= 2592000
 	}
 	if num/86400 > 0 {
-		time += strconv.Itoa(num/86400) + " 天 "
+		time += strconv.Itoa(num/86400) + " day(s) "
 		num %= 86400
 	}
 	if num/3600 > 0 {
-		time += strconv.Itoa(num/3600) + " 小时 "
+		time += strconv.Itoa(num/3600) + " hour(s) "
 		num %= 3600
 	}
 	if num/60 > 0 {
-		time += strconv.Itoa(num/60) + " 分钟 "
+		time += strconv.Itoa(num/60) + " minute(s) "
 		num %= 60
 	}
-	time += strconv.Itoa(num) + " 秒"
+	time += strconv.Itoa(num) + " second(s)"
 	return
 }
 
@@ -244,7 +244,7 @@ func GenerateRandomCharsKey(length int) (string, error) {
 }
 
 func GenerateRandomKey(length int) (string, error) {
-	bytes := make([]byte, length*3/4) // 对于48位的输出，这里应该是36
+	bytes := make([]byte, length*3/4) // For 48-bit output this should be 36
 	if _, err := crand.Read(bytes); err != nil {
 		return "", err
 	}

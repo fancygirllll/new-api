@@ -25,20 +25,20 @@ import {
 } from '@/components/ui/popover'
 
 interface MaskedValueDisplayProps {
-  /** 弹层内标题，如 "Full API Key" / "Full Code" */
+  /** Title inside the popover, e.g. "Full API Key" / "Full Code" */
   label: string
-  /** 完整值，在 Popover 内完整展示 */
+  /** Full value, shown completely inside the Popover */
   fullValue: string
-  /** 表格内显示的脱敏值 */
+  /** Masked value shown inside the table */
   maskedValue: string
-  /** 复制按钮的 tooltip */
+  /** Tooltip for the copy button */
   copyTooltip: string
-  /** 复制按钮的 aria-label */
+  /** aria-label for the copy button */
   copyAriaLabel: string
 }
 
 /**
- * 用于在表格中展示脱敏密钥/兑换码：点击显示完整内容（文本块完整显示，非 Input），支持一键复制。
+ * Displays masked keys/redemption codes in tables: click to reveal the full content (as a complete text block, not an Input), with one-click copy.
  */
 export function MaskedValueDisplay(props: MaskedValueDisplayProps) {
   return (

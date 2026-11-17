@@ -35,10 +35,10 @@ type BaseNavItem = {
    */
   requiredRole?: number
   /**
-   * 分销商专属入口标记（契约 §2.2 张力点 #3）。
-   * 与 requiredRole 语义正交：requiredRole 是 `>=` 阈值，distributorOnly 是精确匹配 role===5。
-   * 设为 true 时仅 role===ROLE.DISTRIBUTOR 可见，admin(10)/root(100) 不见死入口
-   * （服务端 DistributorAuth 是真防线，前端只管体验）。
+   * Distributor-only entry marker (contract §2.2, tension point #3).
+   * Orthogonal to requiredRole semantics: requiredRole is a `>=` threshold, while distributorOnly is an exact role===5 match.
+   * When true the item is visible only to role===ROLE.DISTRIBUTOR; admin(10)/root(100) never see a dead entry
+   * (server-side DistributorAuth is the real defense; the frontend only handles UX).
    */
   distributorOnly?: boolean
 }

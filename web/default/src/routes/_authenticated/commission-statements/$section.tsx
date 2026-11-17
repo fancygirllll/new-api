@@ -27,9 +27,9 @@ import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 /**
- * 管理端对账单路由（契约附录 D4）。
- * beforeLoad 阈值式守卫（role < ROLE.ADMIN → /403，users 页惯例）：
- * 前端守卫仅体验层，服务端 AdminAuth（T-04-02-05）才是真防线。
+ * Admin statement route (contract appendix D4).
+ * Threshold-based beforeLoad guard (role < ROLE.ADMIN → /403, the users-page convention):
+ * the frontend guard is UX-only; server-side AdminAuth (T-04-02-05) is the real defense.
  */
 export const Route = createFileRoute(
   '/_authenticated/commission-statements/$section'

@@ -26,16 +26,16 @@ import {
 } from '@/features/commission-statements/api'
 
 /**
- * 佣金比例 API 层（契约 01-CONTRACT.md §4.3 A1/A2/A3 冻结形状，RATE-01/RATE-03）。
- * 端点映射：
- *   fetchCommissionRates      → GET  /api/commission/rates（A1 列表，扁平嵌入含 username 冗余）
- *   setCommissionRate         → PUT  /api/commission/rates/:distributorId（A2 upsert，body {"rate_bp":N}）
- *   fetchCommissionRateHistory → GET /api/commission/rates/:distributorId/history（A3 变更历史）
- * 业务校验全部在服务端（万分比 0~10000 / role=5 精确匹配 / 路径参数解析），
- * 前端零业务校验依赖，失败信封 message 原样回显。
+ * Commission rate API layer (contract 01-CONTRACT.md §4.3 A1/A2/A3 frozen shapes, RATE-01/RATE-03).
+ * Endpoint mapping:
+ *   fetchCommissionRates      → GET  /api/commission/rates (A1 list, flat embed including the redundant username)
+ *   setCommissionRate         → PUT  /api/commission/rates/:distributorId (A2 upsert, body {"rate_bp":N})
+ *   fetchCommissionRateHistory → GET /api/commission/rates/:distributorId/history (A3 change history)
+ * All business validation is server-side (basis points 0~10000 / exact role=5 match / path parameter parsing);
+ * the frontend relies on zero business validation and echoes the failure envelope message verbatim.
  */
 
-/** A1 行（model.CommissionRateDetail 扁平 JSON，json tag 逐字对齐） */
+/** A1 row (model.CommissionRateDetail flat JSON, json tag aligned verbatim) */
 export interface CommissionRateRow {
   id: number
   distributor_id: number
@@ -45,7 +45,7 @@ export interface CommissionRateRow {
   username: string
 }
 
-/** A3 行（model.CommissionRateHistory json tag 逐字：old_rate_bp/new_rate_bp 全称，禁简写） */
+/** A3 row (model.CommissionRateHistory json tag verbatim: full old_rate_bp/new_rate_bp names, no abbreviations) */
 export interface RateHistoryRow {
   id: number
   distributor_id: number
@@ -57,7 +57,7 @@ export interface RateHistoryRow {
 
 export type CommissionRatePageInfo<T> = StatementPageInfo<T>
 
-/** A1 比例列表分页（AdminAuth，按 distributor_id 升序） */
+/** A1 paginated rate list (AdminAuth, sorted by distributor_id ascending) */
 export async function fetchCommissionRates(
   page = 1
 ): Promise<ApiEnvelope<CommissionRatePageInfo<CommissionRateRow>>> {
@@ -65,7 +65,7 @@ export async function fetchCommissionRates(
   return res.data
 }
 
-/** A2 设置比例（upsert 语义：无行 Create / 有行 Updates，服务端 role=5 精确校验兜底防错绑） */
+/** A2 set rate (upsert semantics: Create when no row / Update when a row exists; the server's exact role=5 check prevents misbinding) */
 export async function setCommissionRate(
   distributorId: number,
   rateBp: number
@@ -76,7 +76,7 @@ export async function setCommissionRate(
   return res.data
 }
 
-/** A3 比例变更历史分页（old_rate_bp→new_rate_bp + operator_id + created_at，RATE-03） */
+/** A3 paginated rate change history (old_rate_bp→new_rate_bp + operator_id + created_at, RATE-03) */
 export async function fetchCommissionRateHistory(
   distributorId: number,
   page = 1
@@ -88,9 +88,9 @@ export async function fetchCommissionRateHistory(
 }
 
 /**
- * 万分比 → 百分比展示（全项目唯一 bp 换算点，D-07「同一换算」）：
- * 500 → '5%'，5000 → '50%'，0 → '0%'，1250 → '12.5%'。
- * 对账单明细「比例」列同样 import 此函数（禁内联禁复制派生）。
+ * Basis points → percentage for display (the project's single bp conversion point, D-07 "same conversion"):
+ * 500 → '5%', 5000 → '50%', 0 → '0%', 1250 → '12.5%'.
+ * The statement items 'rate' column also imports this function (no inlining, no copy-paste derivation).
  */
 export function rateBpToPercent(bp: number): string {
   const percent = bp / 100
@@ -98,5 +98,5 @@ export function rateBpToPercent(bp: number): string {
   return `${normalized}%`
 }
 
-/** 金额/时间展示复用对账单域唯一入口（禁复制派生，S9 格式化唯一入口纪律） */
+/** Amount/time formatting reuses the single entry from the statement domain (no copy-paste derivation, S9 single-formatter discipline) */
 export { formatCents, formatUnixTime }

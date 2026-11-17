@@ -199,7 +199,7 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 			}
 		}
 		// ali image edit https://bailian.console.aliyun.com/?tab=api#/api/?type=model&url=2976416
-		// 如果用户使用表单，则需要解析表单数据
+		// If the user submitted a form, the form data must be parsed.
 		if strings.Contains(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
 			aliRequest, err := oaiFormEdit2AliImageEdit(c, info, request)
 			if err != nil {

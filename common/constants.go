@@ -60,7 +60,7 @@ func ThemeAwarePath(suffix string) string {
 // var ChatLink = ""
 // var ChatLink2 = ""
 var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
-// 保留旧变量以兼容历史逻辑，实际展示由 general_setting.quota_display_type 控制
+// Legacy variables are kept for backward compatibility; actual display is controlled by general_setting.quota_display_type
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
 var DrawingEnabled = true
@@ -75,8 +75,8 @@ var DefaultCollapseSidebar = false // default value of collapse sidebar
 var SessionSecret = uuid.New().String()
 var CryptoSecret = uuid.New().String()
 
-// 会话生命周期键名与阈值（银行式会话管理：30 分钟闲置失效 + 12 小时绝对上限 + 60 秒续期节流）。
-// controller 写入与 middleware 校验共用，避免两处数值漂移。
+// Session lifecycle keys and thresholds (bank-style session management: 30-minute idle expiry + 12-hour absolute limit + 60-second renewal throttle).
+// Shared by controller writes and middleware validation to avoid divergent values.
 const (
 	SessionKeyLoginAt             = "login_at"
 	SessionKeyLastActive          = "last_active"
@@ -101,8 +101,8 @@ var TelegramOAuthEnabled = false
 var TurnstileCheckEnabled = false
 var RegisterEnabled = true
 
-var EmailDomainRestrictionEnabled = false // 是否启用邮箱域名限制
-var EmailAliasRestrictionEnabled = false  // 是否启用邮箱别名限制
+var EmailDomainRestrictionEnabled = false // Whether email domain restrictions are enabled
+var EmailAliasRestrictionEnabled = false  // Whether email alias restrictions are enabled
 var EmailDomainWhitelist = []string{
 	"gmail.com",
 	"163.com",
@@ -173,8 +173,8 @@ const (
 	NodeNameSourceHostname = "hostname"
 )
 
-// NodeName 节点名称，优先从 NODE_NAME 环境变量读取，未配置时回退主机名。
-// 用于审计日志和后台任务中标识节点身份；多实例部署时建议显式配置稳定 NODE_NAME。
+// NodeName is the node name, read from the NODE_NAME environment variable first and falling back to the hostname when unset.
+// Used to identify the node in audit logs and background tasks; in multi-instance deployments, configure a stable NODE_NAME explicitly.
 var NodeName = ""
 
 // NodeNameSource records how NodeName was chosen so future instance-management
@@ -286,5 +286,5 @@ const (
 	TopUpStatusSuccess  = "success"
 	TopUpStatusFailed   = "failed"
 	TopUpStatusExpired  = "expired"
-	TopUpStatusRefunded = "refunded" // 已作废（契约 01-CONTRACT.md 附录 C1 冻结扩展；现有 status 判断点均为精确匹配，零误伤）
+	TopUpStatusRefunded = "refunded" // Deprecated (frozen extension per contract 01-CONTRACT.md appendix C1; all existing status checks use exact matching, so this is safe)
 )

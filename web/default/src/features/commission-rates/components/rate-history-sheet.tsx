@@ -38,15 +38,15 @@ import {
 const PAGE_SIZE = 10
 
 interface RateHistorySheetProps {
-  /** 目标分销商（null=关闭） */
+  /** Target distributor (null=closed) */
   distributorId: number | null
   onOpenChange: (open: boolean) => void
 }
 
 /**
- * 比例变更历史抽屉（A3，RATE-03）：变更时间线逐行渲染
- * old_rate_bp→new_rate_bp（两侧同经唯一换算函数）+ operator_id + created_at。
- * 字段名以 model/commission_rate.go json tag 逐字（全称 old_rate_bp/new_rate_bp，禁简写）。
+ * Rate change history drawer (A3, RATE-03): renders the change timeline row by row
+ * old_rate_bp→new_rate_bp (both sides go through the single conversion function) + operator_id + created_at.
+ * Field names follow model/commission_rate.go json tags verbatim (full old_rate_bp/new_rate_bp names, no abbreviations).
  */
 export function RateHistorySheet({
   distributorId,
@@ -57,7 +57,7 @@ export function RateHistorySheet({
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
-  // 请求序号守卫：仅最新一次请求允许写回状态，防止上一个目标的在途响应乱序覆盖新数据
+  // Request sequence guard: only the latest request may write back state, preventing an in-flight response for a previous target from overwriting new data out of order
   const reqSeq = useRef(0)
 
   const load = useCallback(async () => {
@@ -72,15 +72,15 @@ export function RateHistorySheet({
         setTotal(res.data.total ?? 0)
       }
     } finally {
-      // 旧请求不得复位新请求持有的 loading 态
+      // An old request must not reset the loading state held by a new request
       if (seq === reqSeq.current) {
         setLoading(false)
       }
     }
   }, [distributorId, page])
 
-  // 关闭或切换目标分销商时重置分页与旧数据（对齐 customer-topups-dialog 关闭即重置语义）：
-  // 重开新分销商时 page 已为 1，只发一个干净请求，不携带旧页码
+  // Reset pagination and stale data when closing or switching the target distributor (aligned with the close-implies-reset semantics of customer-topups-dialog):
+  // reopening for a new distributor already has page=1, so only one clean request is sent without carrying over the old page number
   useEffect(() => {
     setPage(1)
     setRows([])

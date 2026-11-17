@@ -119,9 +119,9 @@ export function useProfile() {
     [refreshProfile]
   )
 
-  // Self-rebind attribution to a distributor (契约 §4.2 B1：POST /api/user/aff_rebind)
-  // 错误映射（单一 toast 责任方，postAffRebind 已 skip 全局拦截器提示）：
-  //   403 → 超窗口；400 → 码无效/非分销商/已归属；其余 → 通用失败
+  // Self-rebind attribution to a distributor (contract §4.2 B1: POST /api/user/aff_rebind)
+  // Error mapping (single toast owner; postAffRebind already skips the global interceptor toast):
+  //   403 → window exceeded; 400 → invalid code / not a distributor / already attributed; otherwise → generic failure
   const affRebind = useCallback(
     async (data: { aff_code: string }): Promise<boolean> => {
       try {
@@ -130,7 +130,7 @@ export function useProfile() {
 
         if (response.success) {
           toast.success(i18next.t('Rebind successful'))
-          await refreshProfile() // 刷新 profile，attribution.rebind_available 更新
+          await refreshProfile() // Refresh profile so attribution.rebind_available is updated
           return true
         }
 

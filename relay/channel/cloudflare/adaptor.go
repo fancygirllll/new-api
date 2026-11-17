@@ -82,16 +82,16 @@ func (a *Adaptor) ConvertEmbeddingRequest(c *gin.Context, info *relaycommon.Rela
 }
 
 func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
-	// 添加文件字段
+	// Add the file field.
 	file, _, err := c.Request.FormFile("file")
 	if err != nil {
 		return nil, errors.New("file is required")
 	}
 	defer file.Close()
-	// 打开临时文件用于保存上传的文件内容
+	// Open a temporary file to hold the uploaded file contents
 	requestBody := &bytes.Buffer{}
 
-	// 将上传的文件内容复制到临时文件
+	// Copy the uploaded file contents into the temporary file
 	if _, err := io.Copy(requestBody, file); err != nil {
 		return nil, err
 	}

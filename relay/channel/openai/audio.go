@@ -56,7 +56,7 @@ func OpenaiTTSHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 		})
 	} else {
 		common.SetContextKey(c, constant.ContextKeyLocalCountTokens, true)
-		// 读取响应体到缓冲区
+		// Read the response body into a buffer.
 		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			logger.LogError(c, fmt.Sprintf("failed to read TTS response body: %v", err))
@@ -64,15 +64,15 @@ func OpenaiTTSHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 			return usage
 		}
 
-		// 写入响应到客户端
+		// Write the response to the client.
 		c.Writer.WriteHeaderNow()
 		_, err = c.Writer.Write(bodyBytes)
 		if err != nil {
 			logger.LogError(c, fmt.Sprintf("failed to write TTS response: %v", err))
 		}
 
-		// 计算音频时长并更新 usage
-		audioFormat := "mp3" // 默认格式
+		// Compute the audio duration and update usage.
+		audioFormat := "mp3" // Default format
 		if audioReq, ok := info.Request.(*dto.AudioRequest); ok && audioReq.ResponseFormat != "" {
 			audioFormat = audioReq.ResponseFormat
 		}
@@ -81,8 +81,8 @@ func OpenaiTTSHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 		var durationErr error
 
 		if audioFormat == "pcm" {
-			// PCM 格式没有文件头，根据 OpenAI TTS 的 PCM 参数计算时长
-			// 采样率: 24000 Hz, 位深度: 16-bit (2 bytes), 声道数: 1
+			// PCM has no file header; compute the duration from OpenAI TTS PCM parameters.
+			// Sample rate: 24000 Hz, bit depth: 16-bit (2 bytes), channels: 1
 			const sampleRate = 24000
 			const bytesPerSample = 2
 			const channels = 1
@@ -97,13 +97,13 @@ func OpenaiTTSHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 
 		if durationErr != nil {
 			logger.LogWarn(c, fmt.Sprintf("failed to get audio duration: %v", durationErr))
-			// 如果无法获取时长，则设置保底的 CompletionTokens，根据body大小计算
+			// If the duration cannot be determined, set a fallback CompletionTokens based on the body size.
 			sizeInKB := float64(len(bodyBytes)) / 1000.0
-			estimatedTokens := int(math.Ceil(sizeInKB)) // 粗略估算每KB约等于1 token
+			estimatedTokens := int(math.Ceil(sizeInKB)) // Rough estimate: about 1 token per KB
 			usage.CompletionTokens = estimatedTokens
 			usage.CompletionTokenDetails.AudioTokens = estimatedTokens
 		} else if duration > 0 {
-			// 计算 token: ceil(duration) / 60.0 * 1000，即每分钟 1000 tokens
+			// Compute tokens: ceil(duration) / 60.0 * 1000, i.e. 1000 tokens per minute.
 			completionTokens := int(math.Round(math.Ceil(duration) / 60.0 * 1000))
 			usage.CompletionTokens = completionTokens
 			usage.CompletionTokenDetails.AudioTokens = completionTokens
@@ -121,7 +121,7 @@ func OpenaiSTTHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 	if err != nil {
 		return types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError), nil
 	}
-	// 写入新的 response body
+	// Write the new response body.
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 
 	var responseData struct {

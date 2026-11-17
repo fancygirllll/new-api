@@ -46,11 +46,11 @@ interface RateDialogState {
 }
 
 /**
- * 佣金比例管理页（D-06/D-11，RATE-01/RATE-03）：A1 列表 + 双模式设置弹窗 + 变更历史抽屉。
- * create 入口双落点（D-11）：页头 Actions 区常驻「新设比例」按钮（列表非空时空态不渲染，
- * 此按钮是唯一可达入口）+ 空态引导按钮，两处均开 create 模式弹窗。
- * 弹窗/抽屉置于 SectionPageLayout.Content 内（仅渲染 Title/Actions/Content/Breadcrumb
- * 四命名插槽，外部子树静默不挂载——05-02 实证坑）。
+ * Commission rate management page (D-06/D-11, RATE-01/RATE-03): A1 list + dual-mode setting dialog + change history drawer.
+ * The create entry has two placements (D-11): a persistent 'New Rate' button in the page-header Actions area (not rendered in the empty state when the list is non-empty;
+ * this button is the only reachable entry) + an empty-state guide button; both open the dialog in create mode.
+ * Dialogs/drawers live inside SectionPageLayout.Content (only Title/Actions/Content/Breadcrumb
+ * four named slots render; external subtrees are silently not mounted--a pitfall confirmed in 05-02).
  */
 export function CommissionRates() {
   const { t } = useTranslation()
@@ -86,7 +86,7 @@ export function CommissionRates() {
     <SectionPageLayout>
       <SectionPageLayout.Title>{t('Commission Rates')}</SectionPageLayout.Title>
       <SectionPageLayout.Actions>
-        {/* 页头常驻 create 入口（D-11 双落点之一）：列表非空时的唯一可达入口 */}
+        {/* Persistent page-header create entry (one of the two D-11 placements): the only reachable entry when the list is non-empty */}
         <Button size='sm' onClick={openCreate}>
           {t('New Rate')}
         </Button>
@@ -110,7 +110,7 @@ export function CommissionRates() {
                       <span className='text-muted-foreground'>
                         {t('No rates configured')}
                       </span>
-                      {/* 空态引导 create 入口（D-11 双落点之二） */}
+                      {/* Empty-state guide create entry (the second D-11 placement) */}
                       <Button variant='outline' size='sm' onClick={openCreate}>
                         {t('New Rate')}
                       </Button>
@@ -171,7 +171,7 @@ export function CommissionRates() {
             </Button>
           </div>
 
-          {/* 弹窗/抽屉置于 Content 内：SectionPageLayout 仅渲染命名插槽，外部子树不挂载 */}
+          {/* Dialogs/drawers live inside Content: SectionPageLayout renders only named slots; external subtrees are not mounted */}
           <RateSetDialog
             open={!!rateDialog}
             mode={rateDialog?.mode ?? 'create'}

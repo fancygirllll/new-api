@@ -57,6 +57,9 @@ function formatGroupRatio(
   ratioLabel: string
 ) {
   if (ratio === undefined || ratio === null || ratio === '') return null
+  // The backend uses the literal "Auto" as the ratio sentinel for the auto
+  // group (see controller/group.go); render it as-is without an `x Ratio` suffix.
+  if (ratio === 'Auto') return 'Auto'
   return `${ratio}x ${ratioLabel}`
 }
 

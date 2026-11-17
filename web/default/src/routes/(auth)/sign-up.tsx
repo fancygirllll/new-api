@@ -23,7 +23,7 @@ import { getStatus } from '@/lib/api'
 
 export const Route = createFileRoute('/(auth)/sign-up')({
   beforeLoad: async () => {
-    // 注册关闭（系统设置 RegisterEnabled=false）或自用模式开启时隐藏注册页面
+    // Hide the sign-up page when registration is disabled (system setting RegisterEnabled=false) or self-use mode is enabled
     const status = await getStatus().catch(() => null)
     if (
       status?.self_use_mode_enabled === true ||

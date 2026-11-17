@@ -50,8 +50,8 @@ import { SettingsPageFormActions } from '../../components/settings-page-context'
 import { SettingsSection } from '../../components/settings-section'
 import { useUpdateOption } from '../../hooks/use-update-option'
 
-// 值域校验（契约 §2.4 + §3.4）：payout_day 8~31、days 1~365、mode ∈ {days, unlimited}。
-// 前端校验非权威（仅 UX 层禁用提交），服务端 controller/option.go UpdateOption 已强制（02-03 Task 2）。
+// Value-range validation (contract §2.4 + §3.4): payout_day 8~31, days 1~365, mode ∈ {days, unlimited}.
+// Frontend validation is not authoritative (it only disables submit at the UX layer); the server enforces it in controller/option.go UpdateOption (02-03 Task 2).
 const schema = z.object({
   CommissionEnabled: z.boolean(),
   CommissionPayoutDay: z.coerce.number().int().min(8).max(31),
@@ -123,8 +123,8 @@ export function CommissionSection({
       return
     }
 
-    // 逐键写 /api/option/（useUpdateOption 复用现有端点，M5 无新路由；
-    // 02-01 已注册 updateOptionMap 热更新 case，保存即时生效）
+    // Write per key to /api/option/ (useUpdateOption reuses the existing endpoint; M5 adds no new route;
+    // the updateOptionMap hot-update case is registered in 02-01, so saving takes effect immediately)
     for (const update of updates) {
       await updateOption.mutateAsync(update)
     }

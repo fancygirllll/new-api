@@ -397,7 +397,9 @@ function getUsageStatusBadge(
 }
 
 function formatLabelValue(label: string, value: string) {
-  return label.endsWith('：') ? `${label}${value}` : `${label} ${value}`
+  return label.endsWith(':') || label.endsWith('\uFF1A')
+    ? `${label}${value}`
+    : `${label} ${value}`
 }
 
 const percentTextClassName: Record<

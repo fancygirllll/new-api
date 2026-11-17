@@ -6,20 +6,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HTTPStats 存储HTTP统计信息
+// HTTPStats stores HTTP statistics.
 type HTTPStats struct {
 	activeConnections int64
 }
 
 var globalStats = &HTTPStats{}
 
-// StatsMiddleware 统计中间件
+// StatsMiddleware is the statistics middleware.
 func StatsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 增加活跃连接数
+		// Increment the active connection count.
 		atomic.AddInt64(&globalStats.activeConnections, 1)
 
-		// 确保在请求结束时减少连接数
+		// Ensure the connection count is decremented when the request finishes.
 		defer func() {
 			atomic.AddInt64(&globalStats.activeConnections, -1)
 		}()
@@ -28,12 +28,12 @@ func StatsMiddleware() gin.HandlerFunc {
 	}
 }
 
-// StatsInfo 统计信息结构
+// StatsInfo is the statistics structure.
 type StatsInfo struct {
 	ActiveConnections int64 `json:"active_connections"`
 }
 
-// GetStats 获取统计信息
+// GetStats returns the current statistics.
 func GetStats() StatsInfo {
 	return StatsInfo{
 		ActiveConnections: atomic.LoadInt64(&globalStats.activeConnections),

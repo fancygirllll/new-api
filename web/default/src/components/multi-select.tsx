@@ -79,13 +79,13 @@ interface MultiSelectProps {
   copyChipOnClick?: boolean
 }
 
-const COMMA_REGEX = /[,，\n]/
+const COMMA_REGEX = /[,\uFF0C\n]/
 
 function splitDraft(value: string): { completed: string[]; draft: string } {
   if (!COMMA_REGEX.test(value)) {
     return { completed: [], draft: value }
   }
-  const normalized = value.replaceAll('，', ',').replaceAll('\n', ',')
+  const normalized = value.replaceAll('\uFF0C', ',').replaceAll('\n', ',')
   const parts = normalized.split(',')
   const draft = parts.at(-1) ?? ''
   const completed = parts

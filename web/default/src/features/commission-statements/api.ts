@@ -19,11 +19,11 @@ For commercial licensing, please contact support@quantumnous.com
 import { api } from '@/lib/api'
 
 /**
- * 对账单 API 层（契约 01-CONTRACT.md §4.3 A4/A5/A6 + 附录 D3 A14 冻结形状）。
- * 金额全链路 int64 cents（契约 §3.0），仅展示层 formatCents 除 100，无 float 运算。
+ * Statement API layer (contract 01-CONTRACT.md §4.3 A4/A5/A6 + appendix D3 A14 frozen shapes).
+ * Amounts are int64 cents throughout the chain (contract §3.0); only the display layer divides by 100 via formatCents, with no float arithmetic.
  */
 
-/** 视角：admin=全分销商（A4/A5/A6/A14），self=分销商数据收窄（A10/A11，Phase 6 复用） */
+/** View: admin=all distributors (A4/A5/A6/A14), self=distributor-scoped data (A10/A11, reused in Phase 6) */
 export type StatementScope = 'admin' | 'self'
 
 export interface CommissionStatement {
@@ -60,7 +60,7 @@ export interface StatementItemWithUsername {
   customer_id: number
   complete_time: number
   username: string
-  /** 契约 v1.5 附录 F1：比例快照（万分比），经流水表关联冗余；无关联流水（flow_id=0/人工/冲销）为 0 */
+  /** Contract v1.5 appendix F1: rate snapshot (basis points) joined redundantly via the flow table; 0 when there is no linked flow (flow_id=0/manual/reversal) */
   rate_bp: number
 }
 
@@ -98,14 +98,14 @@ export interface ApiEnvelope<T> {
   data?: T
 }
 
-/** scope → 对账单列表基路径（admin=A4；self=A10 收窄为本人，Phase 6 复用点） */
+/** scope → statement list base path (admin=A4; self=A10 scoped to the distributor, a Phase 6 reuse point) */
 export function statementsBasePath(scope: StatementScope): string {
   return scope === 'self'
     ? '/api/commission/statements/self'
     : '/api/commission/statements'
 }
 
-/** scope → 账单明细路径（admin=A6；self=A11，契约 §4.3 冻结路径） */
+/** scope → statement items path (admin=A6; self=A11, contract §4.3 frozen path) */
 export function statementItemsPath(
   scope: StatementScope,
   statementId: number
@@ -123,7 +123,7 @@ export interface StatementListParams {
   status?: string
 }
 
-/** A4/A10 对账单列表（distributor_id/period/status 三过滤可选，仅 admin 路由支持） */
+/** A4/A10 statement list (optional distributor_id/period/status filters, supported only on the admin route) */
 export async function fetchStatements(
   scope: StatementScope,
   params: StatementListParams = {}
@@ -142,7 +142,7 @@ export async function fetchStatements(
   return res.data
 }
 
-/** A5 账单详情（本体 + adjustments 数组）。契约仅 admin 路由；self 场景由 A10 行数据组装（Phase 6 复用点） */
+/** A5 statement detail (body + adjustments array). Contract has an admin route only; for self the row data from A10 is assembled (Phase 6 reuse point) */
 export async function fetchStatementDetail(
   statementId: number
 ): Promise<
@@ -152,7 +152,7 @@ export async function fetchStatementDetail(
   return res.data
 }
 
-/** A6/A11 账单明细分页（items 含客户 username 冗余） */
+/** A6/A11 paginated statement items (items include the redundant customer username) */
 export async function fetchStatementItems(
   scope: StatementScope,
   statementId: number,
@@ -165,7 +165,7 @@ export async function fetchStatementItems(
   return res.data
 }
 
-/** A14 跨分销商汇总（契约附录 D3 冻结形状，AdminAuth） */
+/** A14 cross-distributor summary (contract appendix D3 frozen shape, AdminAuth) */
 export async function fetchStatementSummary(
   period: string
 ): Promise<ApiEnvelope<StatementSummaryData>> {
@@ -175,13 +175,13 @@ export async function fetchStatementSummary(
   return res.data
 }
 
-/** A7 流水类型（manual_credit 补录 / manual_debit 冲销，model 层白名单） */
+/** A7 flow types (manual_credit top-up / manual_debit reversal, model-layer whitelist) */
 export type ManualFlowType = 'manual_credit' | 'manual_debit'
 
 /**
- * A7 超管人工补录/冲销流水（RootAuth，契约 §4.3 冻结形状，勿增删字段）。
- * amount_cents 恒正（debit 落库取负由服务端处理）；reason 必填审计留痕。
- * 失败信封 message 原样回显（原因不能为空 / flow_type 白名单 / 目标角色校验文案）。
+ * A7 super-admin manual credit/reversal flow (RootAuth, contract §4.3 frozen shape, do not add or remove fields).
+ * amount_cents is always positive (the server stores debit as negative); reason is required for the audit trail.
+ * Failure envelope message is echoed verbatim (reason cannot be empty / flow_type whitelist / target role validation text).
  */
 export async function createManualFlow(
   distributorId: number,
@@ -199,9 +199,9 @@ export async function createManualFlow(
 }
 
 /**
- * A8 超管账单调整单（RootAuth，契约 §4.3 冻结形状，勿增删字段）。
- * delta_cents 可负（正补负减）；仅 status=payable 可开（settled/withdrawing 服务端白名单拒绝）；
- * 服务端按账单当前累计重算 settle 金额，不信任客户端。
+ * A8 super-admin statement adjustment (RootAuth, contract §4.3 frozen shape, do not add or remove fields).
+ * delta_cents may be negative (positive adds, negative subtracts); only status=payable is allowed (the server whitelist rejects settled/withdrawing);
+ * the server recomputes the settle amount from the statement's current totals and does not trust the client.
  */
 export async function createStatementAdjustment(
   statementId: number,
@@ -218,7 +218,7 @@ export async function createStatementAdjustment(
   return res.data
 }
 
-/** 金额分 → 元展示（仅展示层换算；传输/运算层保持 int64 cents，禁浮点累积） */
+/** Cents → yuan for display (display-layer conversion only; transport/computation stays int64 cents, no float accumulation) */
 export function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('zh-CN', {
     minimumFractionDigits: 2,
@@ -226,7 +226,7 @@ export function formatCents(cents: number): string {
   })
 }
 
-/** Unix 秒 → 本地时间展示 */
+/** Unix seconds → local time for display */
 export function formatUnixTime(seconds: number): string {
   if (!seconds) return '-'
   return new Date(seconds * 1000).toLocaleString('zh-CN', { hour12: false })

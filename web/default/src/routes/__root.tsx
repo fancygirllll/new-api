@@ -61,8 +61,8 @@ function RootComponent() {
   )
 }
 
-// 缓存 setup 状态检查结果，避免每次导航都重复调用 API
-// 使用 localStorage 持久化，避免页面刷新后重复检查
+// Cache the setup status check result to avoid re-calling the API on every navigation
+// Persist it in localStorage to avoid re-checking after a page refresh
 const SETUP_CHECKED_KEY = 'setup_status_checked'
 
 function getSetupStatusFromCache(): boolean {
@@ -90,24 +90,24 @@ function setSetupStatusCache(value: boolean): void {
   }
 }
 
-// 内存中的标记，避免同一会话中重复检查
+// In-memory flag to avoid repeated checks within the same session
 let setupStatusChecked = getSetupStatusFromCache()
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
 }>()({
-  // 应用初始化与路由解析前统一校验会话
+  // Validate the session before app initialization and route resolution
   beforeLoad: async ({ location }) => {
     const pathname = location?.pathname || ''
     const needsSetupCheck =
       !setupStatusChecked && !pathname.startsWith('/setup')
 
-    // 用户信息已通过 auth-store 从 localStorage 恢复
-    // 如果 auth.user 存在，说明用户已登录（有缓存的用户数据）
-    // 如果 auth.user 为 null，说明用户未登录，直接让 _authenticated 路由处理重定向
-    // 不再调用 getSelf() API，避免不必要的网络请求和等待
+    // User info is restored from localStorage via auth-store
+    // If auth.user exists, the user is signed in (cached user data)
+    // If auth.user is null, the user is signed out; let the _authenticated route handle the redirect
+    // Do not call the getSelf() API again, avoiding unnecessary network requests and waits
 
-    // 只检查 setup 状态（如果需要）
+    // Only check setup status when needed
     if (needsSetupCheck) {
       const status = await getSetupStatus().catch((error) => {
         if (import.meta.env.DEV) {
@@ -123,8 +123,8 @@ export const Route = createRootRouteWithContext<{
       setupStatusChecked = true
       setSetupStatusCache(true)
     }
-    // 用户认证状态完全依赖 localStorage 缓存
-    // 如果用户有有效 session 但 localStorage 被清空，会被重定向到登录页重新登录
+    // Auth state relies entirely on the localStorage cache
+    // If the user has a valid session but localStorage was cleared, they are redirected to sign in again
   },
   component: RootComponent,
   notFoundComponent: NotFoundError,

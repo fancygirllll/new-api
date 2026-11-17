@@ -43,10 +43,10 @@ import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 /**
- * 管理员提现审核工作台（WDRAW-03/SC3）。
- * 组装纪律（D4 禁复制派生）：列表/弹窗/快照明细全部来自 feature 域共享组件，
- * 本文件只做状态接线（受理直调 + 驳回/批准/打款弹窗 + StatementDetail 快照明细），
- * 各写操作成功后 refreshKey++ 同步重取列表。
+ * Admin withdrawal review workbench (WDRAW-03/SC3).
+ * Assembly discipline (D4: no copy-paste derivation): list/dialogs/statement detail all come from shared feature-domain components;
+ * this file only wires state (direct accept + reject/approve/mark-paid dialogs + StatementDetail statement detail),
+ * and bumps refreshKey++ after each successful mutation to refetch the list.
  */
 function CommissionWithdrawals() {
   const { t } = useTranslation()
@@ -59,8 +59,8 @@ function CommissionWithdrawals() {
 
   const bumpRefresh = useCallback(() => setRefreshKey((k) => k + 1), [])
 
-  // WDRAW-03 快照明细：onOpenStatement → A5 拉取账单本体 → StatementDetail(scope=admin)
-  // 消费既有 A5/A6 端点零后端改动（明细/adjustments 由组件内既定路径自取）
+  // WDRAW-03 statement detail: onOpenStatement → A5 fetches the statement body → StatementDetail(scope=admin)
+  // Consumes the existing A5/A6 endpoints with zero backend changes (items/adjustments are fetched by the component's existing paths)
   useEffect(() => {
     if (stmtDetailId == null) return
     let cancelled = false
@@ -109,7 +109,7 @@ function CommissionWithdrawals() {
               }}
             />
           )}
-          {/* 弹窗置于 Content 内：SectionPageLayout 仅渲染命名插槽，外部子树不挂载 */}
+          {/* Dialogs live inside Content: SectionPageLayout renders only named slots; external subtrees are not mounted */}
           <WithdrawRejectDialog
             withdrawal={rejectTarget}
             onOpenChange={(open) => {
@@ -138,9 +138,9 @@ function CommissionWithdrawals() {
 }
 
 /**
- * 管理员提现工作台路由。
- * beforeLoad 阈值式守卫（role < ROLE.ADMIN → /403，commission-statements 页惯例）：
- * 前端守卫仅体验层，服务端 AdminAuth（D-10）才是真防线。
+ * Admin withdrawal workbench route.
+ * Threshold-based beforeLoad guard (role < ROLE.ADMIN → /403, the commission-statements page convention):
+ * the frontend guard is UX-only; server-side AdminAuth (D-10) is the real defense.
  */
 export const Route = createFileRoute(
   '/_authenticated/commission-withdrawals/$section'

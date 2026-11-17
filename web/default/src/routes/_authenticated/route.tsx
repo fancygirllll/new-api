@@ -22,14 +22,14 @@ import { AuthenticatedLayout } from '@/components/layout'
 import { getSelf } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth-store'
 
-// 内存中的验证标记，避免同一会话中重复验证
+// In-memory verification flag to avoid re-verifying within the same session
 let sessionVerified = false
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
     const { auth } = useAuthStore.getState()
 
-    // 如果本地没有用户信息，直接跳转登录页
+    // No local user info: go straight to the sign-in page
     if (!auth.user) {
       throw redirect({
         to: '/sign-in',
@@ -37,15 +37,15 @@ export const Route = createFileRoute('/_authenticated')({
       })
     }
 
-    // 本地有用户信息，但需要验证 session 是否有效（每个会话只验证一次）
+    // Local user info exists, but the session must be validated (once per session)
     if (!sessionVerified) {
       const res = await getSelf().catch(() => null)
       if (res?.success && res.data) {
-        // 验证成功，更新用户信息（可能有变化）
+        // Validation succeeded; update the user info (it may have changed)
         auth.setUser(res.data)
         sessionVerified = true
       } else {
-        // 验证失败或 API 调用失败，清除本地缓存并跳转登录页
+        // Validation or the API call failed: clear the local cache and go to the sign-in page
         auth.reset()
         throw redirect({
           to: '/sign-in',

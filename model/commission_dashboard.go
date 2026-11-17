@@ -4,12 +4,12 @@ import (
 	"time"
 )
 
-// 分销商佣金仪表盘聚合面（06-01，契约 01-CONTRACT.md §4.3 A9/A12 冻结形状 + v1.5 附录 F2 笔数扩展）。
-// 全部数值服务端聚合（int64 cents，契约 §3.0 精度决策），前端零金额二次计算（D-04 用户裁决）。
-// 四项口径（OQ-1/D-09 裁决）与四卡对账恒等式：已出账 = 已提现 + 待提现 + 提现中。
-// 本文件为 A9 聚合唯一落点（聚合 SQL 禁写入 distributor.go，保持既有聚合点计数唯一）。
+// Distributor commission dashboard aggregation (06-01; contract 01-CONTRACT.md §4.3 A9/A12 frozen shape + v1.5 appendix F2 count extension).
+// All values are aggregated server-side (int64 cents, contract §3.0 precision decision); the frontend performs no amount recomputation (D-04 user ruling).
+// Four metrics (OQ-1/D-09 ruling) and the four-card reconciliation identity: statemented = withdrawn + pending withdrawal + withdrawing.
+// This file is the sole location for A9 aggregation (aggregate SQL must not be added to distributor.go, keeping the aggregation point count unique).
 
-// CommissionDashboard A9 响应体：§4.3 四冻结 cents 字段（名称逐字不动）+ 附录 F2 四笔数加法式扩展。
+// CommissionDashboard is the A9 response body: four frozen cents fields from §4.3 (names unchanged) + four additive count fields from appendix F2.
 type CommissionDashboard struct {
 	CurrentPendingCents  int64 `json:"current_pending_cents"`
 	TotalStatementCents  int64 `json:"total_statement_cents"`
@@ -22,22 +22,22 @@ type CommissionDashboard struct {
 	PendingWithdrawCount int64 `json:"pending_withdraw_count"`
 }
 
-// dashboardAggregateRow 聚合查询行：金额合计 + 笔数（合计列空值包裹，禁 NULL 序列化）。
+// dashboardAggregateRow is an aggregate query row: amount totals + counts (total columns wrapped to avoid NULL serialization).
 type dashboardAggregateRow struct {
 	Total int64
 	Cnt   int64
 }
 
-// GetCommissionDashboard A9 四项独立聚合（逐项可读、断言直观；B4 聚合先例模式平移）。
-// 状态谓词一律状态常量禁字符串字面量；JOIN 串静态字面量禁拼接输入（T-06-01-02）。
-// ① 当期未出账：仅未出账状态流水按佣金流水金额求和（负数冲销自然抵减；与 A12 同谓词绑死）
-// ② 历史已出账：全部状态账单按结算额汇总（含调整单最终应付，OQ-1 settle 口径）
-// ③ 已提现：仅已打款提现单按关联账单结算额汇总（金额实时取账单，附录 E D-08 无金额列）
-// ④ 待提现：仅应付状态账单按结算额汇总
+// GetCommissionDashboard runs four independent A9 aggregations (readable and easy to assert; follows the B4 aggregation precedent).
+// Status predicates always use status constants, never string literals; JOIN clauses are static literals, never concatenated input (T-06-01-02).
+// (1) Current unstatemented: sum commission flow amounts for pending flows only (negative reversals offset naturally; same predicate as A12)
+// (2) Historical statemented: sum settlement amounts across all statement statuses (including final payable adjustments, OQ-1 settle basis)
+// (3) Withdrawn: sum the settlement amount of the related statement for paid withdrawals only (amount read live from the statement; appendix E D-08 has no amount column)
+// (4) Pending withdrawal: sum settlement amounts for payable statements only
 func GetCommissionDashboard(distributorId int) (*CommissionDashboard, error) {
 	d := &CommissionDashboard{}
 
-	// ① 当期未出账
+	// (1) Current unstatemented
 	var flowRow dashboardAggregateRow
 	if err := DB.Model(&CommissionFlow{}).
 		Select("COALESCE(SUM(amount_cents),0) AS total, COUNT(*) AS cnt").
@@ -48,7 +48,7 @@ func GetCommissionDashboard(distributorId int) (*CommissionDashboard, error) {
 	d.CurrentPendingCents = flowRow.Total
 	d.CurrentPendingCount = flowRow.Cnt
 
-	// ② 历史已出账（全状态账单，settle 口径）
+	// (2) Historical statemented (all statement statuses, settle basis)
 	var stmtRow dashboardAggregateRow
 	if err := DB.Model(&CommissionStatement{}).
 		Select("COALESCE(SUM(settle_amount_cents),0) AS total, COUNT(*) AS cnt").
@@ -59,7 +59,7 @@ func GetCommissionDashboard(distributorId int) (*CommissionDashboard, error) {
 	d.TotalStatementCents = stmtRow.Total
 	d.TotalStatementCount = stmtRow.Cnt
 
-	// ③ 已提现（已打款提现单 JOIN 账单取结算额）
+	// (3) Withdrawn (paid withdrawals JOIN statements for the settlement amount)
 	var wdRow dashboardAggregateRow
 	if err := DB.Model(&CommissionWithdrawal{}).
 		Select("COALESCE(SUM(commission_statements.settle_amount_cents),0) AS total, COUNT(*) AS cnt").
@@ -71,7 +71,7 @@ func GetCommissionDashboard(distributorId int) (*CommissionDashboard, error) {
 	d.TotalWithdrawnCents = wdRow.Total
 	d.TotalWithdrawnCount = wdRow.Cnt
 
-	// ④ 待提现（仅应付状态账单）
+	// (4) Pending withdrawal (payable statements only)
 	var payableRow dashboardAggregateRow
 	if err := DB.Model(&CommissionStatement{}).
 		Select("COALESCE(SUM(settle_amount_cents),0) AS total, COUNT(*) AS cnt").
@@ -85,15 +85,15 @@ func GetCommissionDashboard(distributorId int) (*CommissionDashboard, error) {
 	return d, nil
 }
 
-// CurrentPendingSummary A12 响应体（§4.3 三冻结字段逐字，附录 F3 零扩展确认）。
+// CurrentPendingSummary is the A12 response body (§4.3 three frozen fields verbatim; appendix F3 confirms no extension).
 type CurrentPendingSummary struct {
 	Period       string `json:"period"`
 	PendingFlows int64  `json:"pending_flows"`
 	PendingCents int64  `json:"pending_cents"`
 }
 
-// GetCurrentPending A12 未出账实时预览（与 A9-① 同谓词同源；period 取服务器当前自然月，
-// 时区基线 docker-compose TZ=Asia/Shanghai，commission_manual.go 先例）。
+// GetCurrentPending is the A12 live unstatemented preview (same predicate and source as A9-(1); period is the server's current calendar month,
+// with the time zone baseline TZ=Asia/Shanghai from docker-compose, following the commission_manual.go precedent).
 func GetCurrentPending(distributorId int) (*CurrentPendingSummary, error) {
 	var row dashboardAggregateRow
 	if err := DB.Model(&CommissionFlow{}).

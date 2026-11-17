@@ -38,7 +38,7 @@ type GlobalSettings struct {
 	ChatCompletionsToResponsesPolicy ChatCompletionsToResponsesPolicy `json:"chat_completions_to_responses_policy"`
 }
 
-// 默认配置
+// Default configuration
 var defaultOpenaiSettings = GlobalSettings{
 	PassThroughRequestEnabled: false,
 	ThinkingModelBlacklist: []string{
@@ -51,11 +51,11 @@ var defaultOpenaiSettings = GlobalSettings{
 	},
 }
 
-// 全局实例
+// Global instance
 var globalSettings = defaultOpenaiSettings
 
 func init() {
-	// 注册到全局配置管理器
+	// Register with the global config manager
 	config.GlobalConfig.Register("global", &globalSettings)
 }
 
@@ -63,7 +63,7 @@ func GetGlobalSettings() *GlobalSettings {
 	return &globalSettings
 }
 
-// ShouldPreserveThinkingSuffix 判断模型是否配置为保留 thinking/-nothinking/-low/-high/-medium 后缀
+// ShouldPreserveThinkingSuffix reports whether a model is configured to preserve the thinking/-nothinking/-low/-high/-medium suffixes
 func ShouldPreserveThinkingSuffix(modelName string) bool {
 	target := strings.TrimSpace(modelName)
 	if target == "" {

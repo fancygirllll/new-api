@@ -88,10 +88,10 @@ export function BillingHistoryDialog({
   } = useBillingHistory()
 
   const [confirmTradeNo, setConfirmTradeNo] = useState<string | null>(null)
-  // Obs-2：Void（A13 RootAuth）入口仅 root 查看者可见（禁改 hook 签名，组件内自取会话角色）
+  // Obs-2: the Void (A13 RootAuth) entry is visible only to root viewers (do not change the hook signature; the component reads the session role itself)
   const currentUser = useAuthStore((s) => s.auth.user)
   const isRoot = currentUser?.role === ROLE.SUPER_ADMIN
-  // G-5 作废（A13 POST /api/topup/:tradeNo/void，RootAuth；reason 必填审计留痕）
+  // G-5 Void (A13 POST /api/topup/:tradeNo/void, RootAuth; reason is required for the audit trail)
   const [voidTradeNo, setVoidTradeNo] = useState<string | null>(null)
   const [voidReason, setVoidReason] = useState('')
   const [voidError, setVoidError] = useState('')
@@ -119,8 +119,8 @@ export function BillingHistoryDialog({
     setVoiding(true)
     setVoidError('')
     try {
-      // A13 契约附录 C1 冻结形状：POST /api/topup/:tradeNo/void {"reason"}
-      // 失败信封 message 原样回显（状态非法/已出账回滚/重复作废等服务端文案）
+      // A13 contract appendix C1 frozen shape: POST /api/topup/:tradeNo/void {"reason"}
+      // Failure envelope message is echoed verbatim (server text for invalid status / settled-order rollback / duplicate void, etc.)
       const res = await api.post(`/api/topup/${voidTradeNo}/void`, {
         reason: trimmed,
       })
@@ -303,7 +303,7 @@ export function BillingHistoryDialog({
                       </div>
 
                       {/* Admin Actions */}
-                      {/* Obs-2：Void（A13 RootAuth）仅 root 查看者可见；Complete Order 保持 admin（AdminAuth 端点，零误伤） */}
+                      {/* Obs-2: Void (A13 RootAuth) is visible only to root viewers; Complete Order stays admin (AdminAuth endpoint, no collateral impact) */}
                       {(isAdmin && record.status === 'pending') ||
                       (isRoot && record.status === 'success') ? (
                         <div className='mt-4 flex justify-end gap-2'>
@@ -406,7 +406,7 @@ export function BillingHistoryDialog({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* G-5 Confirm Void Order Dialog（A13，reason 必填） */}
+      {/* G-5 Confirm Void Order Dialog (A13, reason required) */}
       <AlertDialog
         open={!!voidTradeNo}
         onOpenChange={(open) => {

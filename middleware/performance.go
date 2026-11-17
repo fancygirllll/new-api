@@ -10,11 +10,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SystemPerformanceCheck 检查系统性能中间件
+// SystemPerformanceCheck is a middleware that checks system performance.
 func SystemPerformanceCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 仅检查 Relay 接口 (/v1, /v1beta 等)
-		// 这里简单判断路径前缀，可以根据实际路由调整
+		// Only check relay endpoints (/v1, /v1beta, etc.).
+		// This is a simple path-prefix check and can be adjusted to match the actual routes.
 		path := c.Request.URL.Path
 		if strings.HasPrefix(path, "/v1/messages") {
 			if err := checkSystemPerformance(); err != nil {
@@ -37,7 +37,7 @@ func SystemPerformanceCheck() gin.HandlerFunc {
 	}
 }
 
-// checkSystemPerformance 检查系统性能是否超过阈值
+// checkSystemPerformance reports whether system performance exceeds the configured thresholds.
 func checkSystemPerformance() *types.NewAPIError {
 	config := common.GetPerformanceMonitorConfig()
 	if !config.Enabled {
@@ -46,21 +46,21 @@ func checkSystemPerformance() *types.NewAPIError {
 
 	status := common.GetSystemStatus()
 
-	// 检查 CPU
+	// Check CPU.
 	if config.CPUThreshold > 0 && int(status.CPUUsage) > config.CPUThreshold {
 		return types.NewErrorWithStatusCode(
 			fmt.Errorf("system cpu overloaded (current: %.1f%%, threshold: %d%%)", status.CPUUsage, config.CPUThreshold),
 			"system_cpu_overloaded", http.StatusServiceUnavailable)
 	}
 
-	// 检查内存
+	// Check memory.
 	if config.MemoryThreshold > 0 && int(status.MemoryUsage) > config.MemoryThreshold {
 		return types.NewErrorWithStatusCode(
 			fmt.Errorf("system memory overloaded (current: %.1f%%, threshold: %d%%)", status.MemoryUsage, config.MemoryThreshold),
 			"system_memory_overloaded", http.StatusServiceUnavailable)
 	}
 
-	// 检查磁盘
+	// Check disk.
 	if config.DiskThreshold > 0 && int(status.DiskUsage) > config.DiskThreshold {
 		return types.NewErrorWithStatusCode(
 			fmt.Errorf("system disk overloaded (current: %.1f%%, threshold: %d%%)", status.DiskUsage, config.DiskThreshold),

@@ -1,20 +1,20 @@
 package model
 
-// 对账单查询面（04-02，契约 01-CONTRACT.md §4.3 A4/A5/A6 + 附录 D3 A14 冻结形状）。
-// 金额全程 int64 cents（契约 §3.0 禁浮点运算）；聚合谓词不依赖时间列（与 04-01 A1 裁决一致）。
+// Statement query surface (04-02; contract 01-CONTRACT.md §4.3 A4/A5/A6 + appendix D3 A14 frozen shape).
+// All amounts are int64 cents (contract §3.0 forbids floating-point math); aggregate predicates do not depend on time columns (consistent with the 04-01 A1 ruling).
 
-// StatementItemDetail A6 明细列表项：CommissionStatementItem 扁平嵌入 + 客户 username 冗余
-// （契约 §4.3 A6；JOIN 先例 model/commission_rate.go ListRates）。
-// RateBp 为 v1.5 附录 F1 增补：比例快照（万分比），无关联流水时为 0。
+// StatementItemDetail is an A6 item list entry: CommissionStatementItem embedded flat + redundant customer username
+// (contract §4.3 A6; JOIN precedent model/commission_rate.go ListRates).
+// RateBp is a v1.5 appendix F1 addition: rate snapshot (basis points); 0 when there is no related flow.
 type StatementItemDetail struct {
 	CommissionStatementItem
 	Username string `json:"username"`
 	RateBp   int    `json:"rate_bp"`
 }
 
-// ListStatements A4 管理员账单列表分页（契约 §4.3 A4）。
-// 三过滤参数可选：distributorId=0 / period、status 空串时跳过该谓词。
-// 排序 period DESC, distributor_id ASC（新期在前、同期按分销商）；COUNT 与查询同谓词。
+// ListStatements paginates the admin statement list (contract §4.3 A4).
+// Three optional filters: skip the predicate when distributorId=0, period or status is an empty string.
+// Order by period DESC, distributor_id ASC (newest period first, then by distributor); COUNT uses the same predicate as the query.
 func ListStatements(distributorId int, period, status string, page, pageSize int) ([]CommissionStatement, int64, error) {
 	query := DB.Model(&CommissionStatement{})
 	if distributorId != 0 {
@@ -39,8 +39,8 @@ func ListStatements(distributorId int, period, status string, page, pageSize int
 	return statements, total, nil
 }
 
-// GetStatementWithAdjustments A5 账单详情：本体 + adjustments 数组（契约 §4.3 A5）。
-// ErrRecordNotFound 原样透传，由 controller 判空转业务语义。
+// GetStatementWithAdjustments is the A5 statement detail: the statement itself + the adjustments array (contract §4.3 A5).
+// ErrRecordNotFound is passed through; the controller converts emptiness into business semantics.
 func GetStatementWithAdjustments(id int64) (*CommissionStatement, []StatementAdjustment, error) {
 	var stmt CommissionStatement
 	if err := DB.First(&stmt, "id = ?", id).Error; err != nil {
@@ -53,10 +53,10 @@ func GetStatementWithAdjustments(id int64) (*CommissionStatement, []StatementAdj
 	return &stmt, adjustments, nil
 }
 
-// ListStatementItems A6 账单明细分页（契约 §4.3 A6）。
-// LEFT JOIN users 冗余客户 username（customer_id 关联）；v1.5 附录 F1 增补
-// 关联佣金流水表冗余比例快照（flow_id 关联，无匹配行时为 0）。
-// 干净 COUNT + 分页，按 id ASC；一处改动 A6/A11 双端点同形状生效。
+// ListStatementItems paginates statement items (contract §4.3 A6).
+// LEFT JOIN users for the redundant customer username (via customer_id); v1.5 appendix F1 addition
+// Join the commission flow table for the redundant rate snapshot (via flow_id; 0 when no row matches).
+// Clean COUNT + pagination, ordered by id ASC; one change applies the same shape to both A6/A11 endpoints.
 func ListStatementItems(statementId int64, page, pageSize int) ([]StatementItemDetail, int64, error) {
 	var total int64
 	if err := DB.Model(&CommissionStatementItem{}).
@@ -78,7 +78,7 @@ func ListStatementItems(statementId int64, page, pageSize int) ([]StatementItemD
 	return details, total, nil
 }
 
-// StatementSummaryItem A14 汇总列表项（契约附录 D3 冻结字段名）。
+// StatementSummaryItem is an A14 summary list item (contract appendix D3 frozen field names).
 type StatementSummaryItem struct {
 	DistributorId        int    `json:"distributor_id"`
 	Username             string `json:"username"`
@@ -88,26 +88,26 @@ type StatementSummaryItem struct {
 	StatementId          int64  `json:"statement_id"`
 }
 
-// StatementSummaryTotals A14 汇总合计（Go 侧累加，D3）。
+// StatementSummaryTotals is the A14 summary totals (accumulated in Go, D3).
 type StatementSummaryTotals struct {
 	TotalCommissionCents int64 `json:"total_commission_cents"`
 	AdjustedCents        int64 `json:"adjusted_cents"`
 	DistributorCount     int   `json:"distributor_count"`
 }
 
-// StatementSummary A14 汇总响应体（契约附录 D3 冻结形状）。
+// StatementSummary is the A14 summary response body (contract appendix D3 frozen shape).
 type StatementSummary struct {
 	Period string                 `json:"period"`
 	Items  []StatementSummaryItem `json:"items"`
 	Totals StatementSummaryTotals `json:"totals"`
 }
 
-// SummarizeStatements A14 跨分销商汇总（契约附录 D3：GROUP BY 聚合该期全部对账单）。
-// uk_stmt_period 保证每 (distributor, period) 至多一行，故逐行即逐分销商；
-// 明细列直接取 statement 快照列（无需二次聚合），totals 在 Go 侧累加（int64 精确）。
-// 按 total_commission_cents DESC 排序（大头在前，管理端报表惯例）。
+// SummarizeStatements is the A14 cross-distributor summary (contract appendix D3: GROUP BY aggregating all statements for the period).
+// uk_stmt_period guarantees at most one row per (distributor, period), so each row is one distributor;
+// detail columns come directly from the statement snapshot columns (no second aggregation); totals are accumulated in Go (exact int64).
+// Ordered by total_commission_cents DESC (largest first, the usual admin reporting convention).
 func SummarizeStatements(period string) (*StatementSummary, error) {
-	// 显式 make 空 slice：空期时 JSON 序列化为 [] 而非 null（契约附录 D3 冻结「items 空数组」）
+	// Explicitly make an empty slice: an empty period serializes as [] instead of null (contract appendix D3 freezes "items empty array")
 	items := make([]StatementSummaryItem, 0)
 	if err := DB.Model(&CommissionStatement{}).
 		Select("commission_statements.distributor_id, users.username, commission_statements.total_commission_cents, commission_statements.adjusted_cents, commission_statements.status AS statement_status, commission_statements.id AS statement_id").

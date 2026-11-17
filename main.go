@@ -98,13 +98,13 @@ func main() {
 		go model.SyncChannelCache(common.SyncFrequency)
 	}
 
-	// 热更新配置
+	// Hot reload configuration
 	go model.SyncOptions(common.SyncFrequency)
 
-	// 周期性重载授权策略，保证多节点/多 master 部署下权限变更能传播到每个实例
+	// Periodically reload authorization policies so permission changes propagate to every instance in multi-node/multi-master deployments
 	go authz.StartPolicySync(common.SyncFrequency)
 
-	// 数据看板
+	// Dashboard
 	go model.UpdateQuotaData()
 
 	if os.Getenv("CHANNEL_UPDATE_FREQUENCY") != "" {
@@ -188,7 +188,7 @@ func main() {
 	store := cookie.NewStore([]byte(common.SessionSecret))
 	store.Options(sessions.Options{
 		Path:     "/",
-		MaxAge:   0, // 0 表示浏览器会话级 Cookie：不写入 Max-Age/Expires，关闭全部窗口即销毁凭证
+		MaxAge:   0, // 0 means a browser-session cookie: no Max-Age/Expires is written, and the credential is destroyed when all windows are closed
 		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteStrictMode,
@@ -198,7 +198,7 @@ func main() {
 	InjectUmamiAnalytics()
 	InjectGoogleAnalytics()
 
-	// 设置路由
+	// Set up routes
 	router.SetRouter(server, router.ThemeAssets{
 		DefaultBuildFS:   buildFS,
 		DefaultIndexPage: indexPage,
@@ -274,7 +274,7 @@ func InitResources() error {
 		}
 	}
 
-	// 加载环境变量
+	// Load environment variables
 	common.InitEnv()
 
 	logger.SetupLogger()
@@ -302,10 +302,10 @@ func InitResources() error {
 	// Initialize options, should after model.InitDB()
 	model.InitOptionMap()
 
-	// 清理旧的磁盘缓存文件
+	// Clean up old disk cache files
 	common.CleanupOldCacheFiles()
 
-	// 初始化模型
+	// Initialize models
 	model.GetPricing()
 
 	// Initialize SQL Database
@@ -322,7 +322,7 @@ func InitResources() error {
 
 	perfmetrics.Init()
 
-	// 启动系统监控
+	// Start system monitoring
 	common.StartSystemMonitor()
 
 	// Initialize i18n

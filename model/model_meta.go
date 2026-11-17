@@ -49,16 +49,16 @@ func (mi *Model) Insert() error {
 	mi.CreatedTime = now
 	mi.UpdatedTime = now
 
-	// 保存原始值（因为 Create 后可能被 GORM 的 default 标签覆盖为 1）
+	// Save the original value (GORM's default tag may overwrite it to 1 after Create)
 	originalStatus := mi.Status
 	originalSyncOfficial := mi.SyncOfficial
 
-	// 先创建记录（GORM 会对零值字段应用默认值）
+	// Create the record first (GORM applies default values to zero-value fields)
 	if err := DB.Create(mi).Error; err != nil {
 		return err
 	}
 
-	// 使用保存的原始值进行更新，确保零值能正确保存
+	// Update with the saved original value so zero values are persisted correctly
 	return DB.Model(&Model{}).Where("id = ?", mi.Id).Updates(map[string]interface{}{
 		"status":        originalStatus,
 		"sync_official": originalSyncOfficial,
@@ -76,7 +76,7 @@ func IsModelNameDuplicated(id int, name string) (bool, error) {
 
 func (mi *Model) Update() error {
 	mi.UpdatedTime = common.GetTimestamp()
-	// 使用 Select 强制更新所有字段，包括零值
+	// Use Select to force updating all fields, including zero values
 	return DB.Model(&Model{}).Where("id = ?", mi.Id).
 		Select("model_name", "description", "icon", "tags", "vendor_id", "endpoints", "status", "sync_official", "name_rule", "updated_time").
 		Updates(mi).Error

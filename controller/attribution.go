@@ -13,18 +13,18 @@ import (
 	"gorm.io/gorm"
 )
 
-// affRebindRequest 自助补绑请求体（契约 §4.2 B1）。
+// affRebindRequest is the self-service rebind request body (contract §4.2 B1).
 type affRebindRequest struct {
 	AffCode string `json:"aff_code"`
 }
 
-// AffRebind B1 自助补绑 handler（UserAuth）。
-// 事务内条件 UPDATE inviter_id=0 防并发重复绑定，窗口校验先行。
-// 错误映射（契约 §4.2 B1 + plan 02-03 Task 1）：
-//   - aff_code 为空 → 400 参数错误
+// AffRebind is the B1 self-service rebind handler (UserAuth).
+// A conditional UPDATE inviter_id=0 inside the transaction prevents concurrent duplicate binding; the window check runs first.
+// Error mapping (contract §4.2 B1 + plan 02-03 Task 1):
+//   - empty aff_code -> 400 invalid parameter
 //   - errInvalidAffCode / errNotDistributor → 400
-//   - errAlreadyBound → 400（已有归属）
-//   - errWindowExpired → 403（超窗口）
+//   - errAlreadyBound -> 400 (already attributed)
+//   - errWindowExpired -> 403 (window expired)
 //   - errUserNotFound → 404
 func AffRebind(c *gin.Context) {
 	var req affRebindRequest
@@ -66,17 +66,17 @@ func AffRebind(c *gin.Context) {
 	common.ApiSuccess(c, gin.H{"success": true})
 }
 
-// adminBindRequest 管理员补绑请求体（契约 §4.2 B2）。
+// adminBindRequest is the admin rebind request body (contract §4.2 B2).
 type adminBindRequest struct {
-	UserId       int    `json:"user_id"`
-	DistributorId int   `json:"distributor_id"`
-	Reason       string `json:"reason"`
+	UserId        int    `json:"user_id"`
+	DistributorId int    `json:"distributor_id"`
+	Reason        string `json:"reason"`
 }
 
-// AdminBindAttribution B2 管理员补绑 handler（RootAuth）。
-// F5 无条件覆盖：不受 inviter_id=0 约束，可对已有归属客户修正归属。
-// 同事务写审计 AttributionChange{source: "admin_bind"}。
-// reason 必填（契约 §4.2 B2 明确）。
+// AdminBindAttribution is the B2 admin rebind handler (RootAuth).
+// F5 unconditional overwrite: not constrained by inviter_id=0, can correct attribution for already-attributed customers.
+// Write the audit AttributionChange{source: "admin_bind"} in the same transaction.
+// reason is required (explicitly stated in contract §4.2 B2).
 func AdminBindAttribution(c *gin.Context) {
 	var req adminBindRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -122,8 +122,8 @@ func AdminBindAttribution(c *gin.Context) {
 	common.ApiSuccess(c, gin.H{"success": true})
 }
 
-// GetAttributionChanges B3 归属审计查询 handler（AdminAuth）。
-// 分页查询 AttributionChange 记录，支持按 user_id 过滤。
+// GetAttributionChanges is the B3 attribution audit query handler (AdminAuth).
+// Paginated query of AttributionChange records, filterable by user_id.
 func GetAttributionChanges(c *gin.Context) {
 	userId := 0
 	if uidStr := c.Query("user_id"); uidStr != "" {
@@ -142,11 +142,11 @@ func GetAttributionChanges(c *gin.Context) {
 	common.ApiSuccess(c, pageInfo)
 }
 
-// GetDistributorCustomersForAdmin B7 管理员查看任意分销商名下客户列表（AdminAuth）。
-// 契约附录 G（plan 6.1 G-1）：行形状与 B4 distributorCustomerItem 逐字一致，
-// 聚合查询参数化复用 B4 实现（listDistributorCustomerItems）；:id 取 path 参数，
-// 非数字 400（文案循 B5 同场景先例，不依赖 i18n 初始化）；权限由路由层中间件保证，
-// controller 零权限逻辑。
+// GetDistributorCustomersForAdmin B7 lets admins view the customer list of any distributor (AdminAuth).
+// contract appendix G (plan 6.1 G-1): the row shape is identical to B4 distributorCustomerItem,
+// the aggregation query reuses the B4 implementation (listDistributorCustomerItems); :id comes from the path,
+// non-numeric -> 400 (wording follows the B5 precedent in the same scenario, without depending on i18n init); permissions are guaranteed by route middleware,
+// the controller has zero permission logic.
 func GetDistributorCustomersForAdmin(c *gin.Context) {
 	distributorId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

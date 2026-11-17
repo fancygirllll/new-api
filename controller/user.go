@@ -68,9 +68,9 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// 检查是否启用2FA
+	// Check whether 2FA is enabled
 	if model.IsTwoFAEnabled(user.Id) {
-		// 设置pending session，等待2FA验证
+		// Set up a pending session awaiting 2FA verification
 		session := sessions.Default(c)
 		session.Set("pending_username", user.Username)
 		session.Set("pending_user_id", user.Id)
@@ -93,7 +93,7 @@ func Login(c *gin.Context) {
 	setupLogin(&user, c)
 }
 
-// loginMethodFromContext 根据请求路径推导登录方式，用于登录审计日志。
+// loginMethodFromContext derives the login method from the request path for login audit logs.
 func loginMethodFromContext(c *gin.Context) string {
 	switch c.FullPath() {
 	case "/api/user/login":
@@ -116,7 +116,7 @@ func loginMethodFromContext(c *gin.Context) string {
 	}
 }
 
-// recordLoginAudit 记录登录成功审计日志（对所有用户启用，仅记录成功，不记录失败）。
+// recordLoginAudit records a successful-login audit log (enabled for all users; only successes are recorded, not failures).
 func recordLoginAudit(user *model.User, c *gin.Context) {
 	method := loginMethodFromContext(c)
 	ip := c.ClientIP()
@@ -140,7 +140,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 	session.Set("role", user.Role)
 	session.Set("status", user.Status)
 	session.Set("group", user.Group)
-	// 会话生命周期基准：login_at 为 12 小时绝对上限，last_active 为 30 分钟闲置判定
+	// Session lifetime baseline: login_at is the 12-hour absolute limit, last_active is the 30-minute idle check
 	session.Set(common.SessionKeyLoginAt, now)
 	session.Set(common.SessionKeyLastActive, now)
 	err := session.Save()
@@ -166,7 +166,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 func Logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Clear()
-	// MaxAge: -1 让浏览器立即删除会话 Cookie，避免退出后仍保留空会话凭证直到关闭浏览器
+	// MaxAge: -1 makes the browser delete the session cookie immediately, avoiding empty session credentials lingering after logout until the browser closes
 	session.Options(sessions.Options{
 		Path:     "/",
 		MaxAge:   -1,
@@ -234,7 +234,7 @@ func Register(c *gin.Context) {
 		Password:    user.Password,
 		DisplayName: user.Username,
 		InviterId:   inviterId,
-		Role:        common.RoleCommonUser, // 明确设置角色为普通用户
+		Role:        common.RoleCommonUser, // Explicitly set the role to regular user
 	}
 	if common.EmailVerificationEnabled {
 		cleanUser.Email = user.Email
@@ -244,13 +244,13 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// 获取插入后的用户ID
+	// Get the user ID after insertion
 	var insertedUser model.User
 	if err := model.DB.Where("username = ?", cleanUser.Username).First(&insertedUser).Error; err != nil {
 		common.ApiErrorI18n(c, i18n.MsgUserRegisterFailed)
 		return
 	}
-	// 生成默认令牌
+	// Generate the default token
 	if constant.GenerateDefaultToken {
 		key, err := common.GenerateKey()
 		if err != nil {
@@ -258,15 +258,15 @@ func Register(c *gin.Context) {
 			common.SysLog("failed to generate token key: " + err.Error())
 			return
 		}
-		// 生成默认令牌
+		// Generate the default token
 		token := model.Token{
-			UserId:             insertedUser.Id, // 使用插入后的用户ID
-			Name:               cleanUser.Username + "的初始令牌",
+			UserId:             insertedUser.Id, // Use the user ID after insertion
+			Name:               cleanUser.Username + "'s initial token",
 			Key:                key,
 			CreatedTime:        common.GetTimestamp(),
 			AccessedTime:       common.GetTimestamp(),
-			ExpiredTime:        -1,     // 永不过期
-			RemainQuota:        500000, // 示例额度
+			ExpiredTime:        -1,     // Never expires
+			RemainQuota:        500000, // Sample quota
 			UnlimitedQuota:     true,
 			ModelLimitsEnabled: false,
 		}
@@ -333,9 +333,9 @@ func canManageTargetRole(myRole int, targetRole int) bool {
 	return myRole == common.RoleRootUser || myRole > targetRole
 }
 
-// isDistributorRoleValid 判断角色值是否为合法的可设置值（契约 §4.1 M1 + §6）。
-// 合法值集合 {1,5,10,100}；不含 Guest=0——0 走"不修改占位"路径，由调用方处理。
-// DB 层 users.role 是 int 列无 enum 约束，唯一写入口 UpdateUser 的应用层校验是防线。
+// isDistributorRoleValid reports whether a role value is a valid assignable value (contract §4.1 M1 + §6).
+// Valid values are {1,5,10,100}; Guest=0 is excluded - 0 follows the "no change placeholder" path, handled by the caller.
+// The DB layer's users.role is an int column without enum constraints; the application-level validation in the sole write path UpdateUser is the line of defense.
 func isDistributorRoleValid(role int) bool {
 	return role == common.RoleCommonUser || role == common.RoleDistributorUser ||
 		role == common.RoleAdminUser || role == common.RoleRootUser
@@ -465,21 +465,21 @@ func GetSelf(c *gin.Context) {
 	// Hide admin remarks: set to empty to trigger omitempty tag, ensuring the remark field is not included in JSON returned to regular users
 	user.Remark = ""
 
-	// 计算用户权限信息
+	// Compute user permission info
 	permissions := calculateUserPermissions(userRole)
 	permissions["admin_permissions"] = authz.Capabilities(id, userRole)
 
-	// 获取用户设置并提取sidebar_modules
+	// Get user settings and extract sidebar_modules
 	userSetting := user.GetSetting()
 
-	// M2（契约 §4.1 + 张力点 #5 向后兼容）：追加 attribution 对象。
-	// 不动现有顶层 inviter_id 字段（前端其他处可继续读顶层字段）；
-	// 前端补绑入口消费 attribution.rebind_available 显示/隐藏（ATTR-05）。
+	// M2 (contract §4.1 + tension point #5 backward compatibility): append the attribution object.
+	// Leave the existing top-level inviter_id field untouched (other frontend code can keep reading it);
+	// The frontend rebind entry consumes attribution.rebind_available to show/hide (ATTR-05).
 	// rebind_available = inviter_id==0 && CanRebind(created_at, mode, days)
 	inviterId := user.InviterId
 	rebindAvailable := inviterId == 0 && model.CanRebind(user.CreatedAt, common.AffRebindWindowMode, common.AffRebindWindowDays)
 
-	// 构建响应数据，包含用户信息和权限
+	// Build the response data including user info and permissions
 	responseData := map[string]interface{}{
 		"id":                user.Id,
 		"username":          user.Username,
@@ -504,8 +504,8 @@ func GetSelf(c *gin.Context) {
 		"linux_do_id":       user.LinuxDOId,
 		"setting":           user.Setting,
 		"stripe_customer":   user.StripeCustomer,
-		"sidebar_modules":   userSetting.SidebarModules, // 正确提取sidebar_modules字段
-		"permissions":       permissions,                // 新增权限字段
+		"sidebar_modules":   userSetting.SidebarModules, // Correctly extract the sidebar_modules field
+		"permissions":       permissions,                // New permissions field
 		"attribution": gin.H{
 			"inviter_id":       inviterId,
 			"rebind_available": rebindAvailable,
@@ -520,46 +520,46 @@ func GetSelf(c *gin.Context) {
 	return
 }
 
-// 计算用户权限的辅助函数
+// Helper that computes user permissions
 func calculateUserPermissions(userRole int) map[string]interface{} {
 	permissions := map[string]interface{}{}
 
-	// 根据用户角色计算权限
+	// Compute permissions based on the user role
 	if userRole == common.RoleRootUser {
-		// 超级管理员不需要边栏设置功能
+		// The super administrator does not need sidebar settings
 		permissions["sidebar_settings"] = false
 		permissions["sidebar_modules"] = map[string]interface{}{}
 	} else if userRole == common.RoleAdminUser {
-		// 管理员可以设置边栏，但不包含系统设置功能
+		// Administrators can configure the sidebar but not system settings
 		permissions["sidebar_settings"] = true
 		permissions["sidebar_modules"] = map[string]interface{}{
 			"admin": map[string]interface{}{
-				"setting": false, // 管理员不能访问系统设置
+				"setting": false, // Administrators cannot access system settings
 			},
 		}
 	} else {
-		// 普通用户只能设置个人功能，不包含管理员区域
+		// Regular users can only configure personal features, not the admin area
 		permissions["sidebar_settings"] = true
 		permissions["sidebar_modules"] = map[string]interface{}{
-			"admin": false, // 普通用户不能访问管理员区域
+			"admin": false, // Regular users cannot access the admin area
 		}
 	}
 
 	return permissions
 }
 
-// 根据用户角色生成默认的边栏配置
+// Generate the default sidebar configuration based on the user role
 func generateDefaultSidebarConfig(userRole int) string {
 	defaultConfig := map[string]interface{}{}
 
-	// 聊天区域 - 所有用户都可以访问
+	// Chat area - accessible to all users
 	defaultConfig["chat"] = map[string]interface{}{
 		"enabled":    true,
 		"playground": true,
 		"chat":       true,
 	}
 
-	// 控制台区域 - 所有用户都可以访问
+	// Console area - accessible to all users
 	defaultConfig["console"] = map[string]interface{}{
 		"enabled":    true,
 		"detail":     true,
@@ -569,26 +569,26 @@ func generateDefaultSidebarConfig(userRole int) string {
 		"task":       true,
 	}
 
-	// 个人中心区域 - 所有用户都可以访问
+	// Personal center area - accessible to all users
 	defaultConfig["personal"] = map[string]interface{}{
 		"enabled":  true,
 		"topup":    true,
 		"personal": true,
 	}
 
-	// 管理员区域 - 根据角色决定
+	// Admin area - determined by role
 	if userRole == common.RoleAdminUser {
-		// 管理员可以访问管理员区域，但不能访问系统设置
+		// Administrators can access the admin area but not system settings
 		defaultConfig["admin"] = map[string]interface{}{
 			"enabled":    true,
 			"channel":    true,
 			"models":     true,
 			"redemption": true,
 			"user":       true,
-			"setting":    false, // 管理员不能访问系统设置
+			"setting":    false, // Administrators cannot access system settings
 		}
 	} else if userRole == common.RoleRootUser {
-		// 超级管理员可以访问所有功能
+		// The super administrator can access all features
 		defaultConfig["admin"] = map[string]interface{}{
 			"enabled":    true,
 			"channel":    true,
@@ -598,22 +598,22 @@ func generateDefaultSidebarConfig(userRole int) string {
 			"setting":    true,
 		}
 	}
-	// 普通用户不包含admin区域
+	// Regular users do not include the admin area
 
-	// 转换为JSON字符串
+	// Convert to a JSON string
 	configBytes, err := json.Marshal(defaultConfig)
 	if err != nil {
-		common.SysLog("生成默认边栏配置失败: " + err.Error())
+		common.SysLog("Failed to generate the default sidebar configuration: " + err.Error())
 		return ""
 	}
 
 	return string(configBytes)
 }
 
-// filterChatCapableModels 过滤掉图片生成模型（如 glm-image、dall-e-3、gpt-image-1）。
-// 该接口的消费方均为聊天场景（Playground 模型下拉、总览页快速开始示例），而图片
-// 模型只响应 /v1/images/generations，出现在聊天下拉中会导致客户误选后必然失败。
-// /v1/models 走 ListModels，不受此过滤影响，图片 API 调用方仍可正常获取模型列表。
+// filterChatCapableModels excludes image generation models (such as glm-image, dall-e-3, gpt-image-1).
+// This endpoint's consumers are all chat scenarios (Playground model dropdown, overview page quick-start examples), while image
+// models only respond on /v1/images/generations; showing them in the chat dropdown guarantees failures after customer misselection.
+// /v1/models goes through ListModels and is unaffected by this filter; image API callers can still get the model list.
 func filterChatCapableModels(models []string) []string {
 	filtered := make([]string, 0, len(models))
 	for _, m := range models {
@@ -693,27 +693,27 @@ func UpdateUser(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	// M1 role 变更路径（契约 §4.1 M1 + F3）：
-	//   - 0=不修改占位（保留现有语义，Pitfall 2），回写 originRole
-	//   - 合法值 {1,5,10,100}，非法值 {2,7,...} 返回 400（DB 层 int 列无 enum 约束，防线只在应用层，契约 §6）
-	//   - 变更时须 canManageTargetRole 双向校验（提升与降级均须 myRole > targetRole 或 root，张力点 #1）
-	//   - canManageTargetRole 现有公式 myRole>targetRole 天然覆盖 role=5：admin(10)>distributor(5) 成立
+	// M1 role change path (contract §4.1 M1 + F3):
+	//   - 0 = no-change placeholder (keeps existing semantics, Pitfall 2); write back originRole
+	//   - valid values {1,5,10,100}; invalid values {2,7,...} return 400 (the DB int column has no enum constraint, so the defense is only in the application layer, contract §6)
+	//   - changes require bidirectional canManageTargetRole checks (both promotion and demotion need myRole > targetRole or root, tension point #1)
+	//   - the existing canManageTargetRole formula myRole>targetRole naturally covers role=5: admin(10)>distributor(5) holds
 	newRole := updatedUser.Role
 	originRole := originUser.Role
 	myRole := c.GetInt("role")
 	if newRole == common.RoleGuestUser {
-		// 0=不修改占位，回写 originRole 保持 EditWithTx 行为一致
+		// 0 = no-change placeholder; write back originRole to keep EditWithTx behavior consistent
 		updatedUser.Role = originRole
 	} else if !isDistributorRoleValid(newRole) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
-	// 管理员须能管理目标用户的当前角色（无论是否变更都需校验）
+	// The admin must be able to manage the target user's current role (checked whether or not it changes)
 	if !canManageTargetRole(myRole, originRole) {
 		common.ApiErrorI18n(c, i18n.MsgUserNoPermissionHigherLevel)
 		return
 	}
-	// 若 role 变更，还须能管理目标角色——双向校验（admin 可管理 distributor=5，但同级不可动）
+	// If role changes, the admin must also manage the target role - bidirectional check (admin can manage distributor=5, but peers cannot be changed)
 	if updatedUser.Role != originRole && !canManageTargetRole(myRole, updatedUser.Role) {
 		common.ApiErrorI18n(c, i18n.MsgUserNoPermissionHigherLevel)
 		return
@@ -743,9 +743,9 @@ func UpdateUser(c *gin.Context) {
 	if err := model.InvalidateUserCache(updatedUser.Id); err != nil {
 		common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", updatedUser.Id, err.Error()))
 	}
-	// 契约 F3：角色变更后须同时失效令牌缓存。
-	// UserBase 缓存不含 Role（user_cache.go:17-25），AccessToken 通道（ValidateAccessToken）直查 DB 即时生效；
-	// session 通道读登录快照，需重新登录才生效（设计非缺陷，ROADMAP Phase 2 验收标准 1 一致）。
+	// Contract F3: role changes must also invalidate the token cache.
+	// The UserBase cache does not contain Role (user_cache.go:17-25); the AccessToken path (ValidateAccessToken) queries the DB directly and takes effect immediately;
+	// the session path reads the login snapshot and requires re-login (by design, consistent with ROADMAP Phase 2 acceptance criterion 1).
 	if err := model.InvalidateUserTokensCache(updatedUser.Id); err != nil {
 		common.SysLog(fmt.Sprintf("failed to invalidate tokens cache for user %d: %s", updatedUser.Id, err.Error()))
 	}
@@ -809,7 +809,7 @@ func UpdateSelf(c *gin.Context) {
 		return
 	}
 
-	// 检查是否是用户设置更新请求 (sidebar_modules 或 language)
+	// Check whether this is a user settings update request (sidebar_modules or language)
 	if sidebarModules, sidebarExists := requestData["sidebar_modules"]; sidebarExists {
 		userId := c.GetInt("id")
 		user, err := model.GetUserById(userId, false)
@@ -818,15 +818,15 @@ func UpdateSelf(c *gin.Context) {
 			return
 		}
 
-		// 获取当前用户设置
+		// Get current user settings
 		currentSetting := user.GetSetting()
 
-		// 更新sidebar_modules字段
+		// Update the sidebar_modules field
 		if sidebarModulesStr, ok := sidebarModules.(string); ok {
 			currentSetting.SidebarModules = sidebarModulesStr
 		}
 
-		// 保存更新后的设置
+		// Save the updated settings
 		user.SetSetting(currentSetting)
 		if err := user.Update(false); err != nil {
 			common.ApiErrorI18n(c, i18n.MsgUpdateFailed)
@@ -837,7 +837,7 @@ func UpdateSelf(c *gin.Context) {
 		return
 	}
 
-	// 检查是否是语言偏好更新请求
+	// Check whether this is a language preference update request
 	if language, langExists := requestData["language"]; langExists {
 		userId := c.GetInt("id")
 		user, err := model.GetUserById(userId, false)
@@ -846,15 +846,15 @@ func UpdateSelf(c *gin.Context) {
 			return
 		}
 
-		// 获取当前用户设置
+		// Get current user settings
 		currentSetting := user.GetSetting()
 
-		// 更新language字段
+		// Update the language field
 		if langStr, ok := language.(string); ok {
 			currentSetting.Language = langStr
 		}
 
-		// 保存更新后的设置
+		// Save the updated settings
 		user.SetSetting(currentSetting)
 		if err := user.Update(false); err != nil {
 			common.ApiErrorI18n(c, i18n.MsgUpdateFailed)
@@ -865,7 +865,7 @@ func UpdateSelf(c *gin.Context) {
 		return
 	}
 
-	// 原有的用户信息更新逻辑
+	// Existing user info update logic
 	var user model.User
 	requestDataBytes, err := json.Marshal(requestData)
 	if err != nil {
@@ -920,10 +920,10 @@ func checkUpdatePassword(originalPassword string, newPassword string, userId int
 		return
 	}
 
-	// 密码不为空,需要验证原密码
-	// 支持第一次账号绑定时原密码为空的情况
+	// Password is not empty, so the current password must be verified
+	// Support the case where the current password is empty on first account binding
 	if !common.ValidatePasswordAndHash(originalPassword, currentUser.Password) && currentUser.Password != "" {
-		err = fmt.Errorf("原密码错误")
+		err = fmt.Errorf("Incorrect current password")
 		return
 	}
 	if newPassword == "" {
@@ -1011,7 +1011,7 @@ func CreateUser(c *gin.Context) {
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
-		Role:        user.Role, // 保持管理员设置的角色
+		Role:        user.Role, // Keep the role set by the administrator
 	}
 	authzTouched := false
 	if err := model.DB.Transaction(func(tx *gorm.DB) error {
@@ -1111,8 +1111,8 @@ func ManageUser(c *gin.Context) {
 			})
 			return
 		}
-		// 删除用户后，强制清理 Redis 中所有该用户令牌的缓存，
-		// 避免已缓存的令牌在 TTL 过期前仍能通过 TokenAuth 校验。
+		// After deleting a user, forcibly clear all cached tokens for that user in Redis,
+		// so cached tokens cannot still pass TokenAuth validation before their TTL expires.
 		if err := model.InvalidateUserTokensCache(user.Id); err != nil {
 			common.SysLog(fmt.Sprintf("failed to invalidate tokens cache for user %d: %s", user.Id, err.Error()))
 		}
@@ -1207,10 +1207,10 @@ func ManageUser(c *gin.Context) {
 			return
 		}
 	}
-	// 禁用 / 角色调整后，强制失效用户缓存与其全部令牌缓存，
-	// 避免在 Redis TTL 过期前仍使用旧状态（尤其是禁用后仍可发起请求的问题）。
-	// InvalidateUserCache 会让下一次 GetUserCache 从数据库重新加载，
-	// InvalidateUserTokensCache 则确保令牌侧的缓存也同步刷新。
+	// After disabling or changing a role, forcibly invalidate the user cache and all of the user's token caches,
+	// so stale state is not used before the Redis TTL expires (especially requests still succeeding after being disabled).
+	// InvalidateUserCache makes the next GetUserCache reload from the database,
+	// while InvalidateUserTokensCache ensures the token-side cache is refreshed too.
 	if req.Action == "disable" || req.Action == "promote" || req.Action == "demote" {
 		if err := model.InvalidateUserCache(user.Id); err != nil {
 			common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
@@ -1379,59 +1379,59 @@ func UpdateUserSetting(c *gin.Context) {
 		return
 	}
 
-	// 验证预警类型
+	// Validate the notification type
 	if req.QuotaWarningType != dto.NotifyTypeEmail && req.QuotaWarningType != dto.NotifyTypeWebhook && req.QuotaWarningType != dto.NotifyTypeBark && req.QuotaWarningType != dto.NotifyTypeGotify {
 		common.ApiErrorI18n(c, i18n.MsgSettingInvalidType)
 		return
 	}
 
-	// 验证预警阈值
+	// Validate the notification threshold
 	if req.QuotaWarningThreshold <= 0 {
 		common.ApiErrorI18n(c, i18n.MsgQuotaThresholdGtZero)
 		return
 	}
 
-	// 如果是webhook类型,验证webhook地址
+	// For the webhook type, validate the webhook URL
 	if req.QuotaWarningType == dto.NotifyTypeWebhook {
 		if req.WebhookUrl == "" {
 			common.ApiErrorI18n(c, i18n.MsgSettingWebhookEmpty)
 			return
 		}
-		// 验证URL格式
+		// Validate the URL format
 		if _, err := url.ParseRequestURI(req.WebhookUrl); err != nil {
 			common.ApiErrorI18n(c, i18n.MsgSettingWebhookInvalid)
 			return
 		}
 	}
 
-	// 如果是邮件类型，验证邮箱地址
+	// For the email type, validate the email address
 	if req.QuotaWarningType == dto.NotifyTypeEmail && req.NotificationEmail != "" {
-		// 验证邮箱格式
+		// Validate the email format
 		if !strings.Contains(req.NotificationEmail, "@") {
 			common.ApiErrorI18n(c, i18n.MsgSettingEmailInvalid)
 			return
 		}
 	}
 
-	// 如果是Bark类型，验证Bark URL
+	// For the Bark type, validate the Bark URL
 	if req.QuotaWarningType == dto.NotifyTypeBark {
 		if req.BarkUrl == "" {
 			common.ApiErrorI18n(c, i18n.MsgSettingBarkUrlEmpty)
 			return
 		}
-		// 验证URL格式
+		// Validate the URL format
 		if _, err := url.ParseRequestURI(req.BarkUrl); err != nil {
 			common.ApiErrorI18n(c, i18n.MsgSettingBarkUrlInvalid)
 			return
 		}
-		// 检查是否是HTTP或HTTPS
+		// Check whether it is HTTP or HTTPS
 		if !strings.HasPrefix(req.BarkUrl, "https://") && !strings.HasPrefix(req.BarkUrl, "http://") {
 			common.ApiErrorI18n(c, i18n.MsgSettingUrlMustHttp)
 			return
 		}
 	}
 
-	// 如果是Gotify类型，验证Gotify URL和Token
+	// For the Gotify type, validate the Gotify URL and token
 	if req.QuotaWarningType == dto.NotifyTypeGotify {
 		if req.GotifyUrl == "" {
 			common.ApiErrorI18n(c, i18n.MsgSettingGotifyUrlEmpty)
@@ -1441,12 +1441,12 @@ func UpdateUserSetting(c *gin.Context) {
 			common.ApiErrorI18n(c, i18n.MsgSettingGotifyTokenEmpty)
 			return
 		}
-		// 验证URL格式
+		// Validate the URL format
 		if _, err := url.ParseRequestURI(req.GotifyUrl); err != nil {
 			common.ApiErrorI18n(c, i18n.MsgSettingGotifyUrlInvalid)
 			return
 		}
-		// 检查是否是HTTP或HTTPS
+		// Check whether it is HTTP or HTTPS
 		if !strings.HasPrefix(req.GotifyUrl, "https://") && !strings.HasPrefix(req.GotifyUrl, "http://") {
 			common.ApiErrorI18n(c, i18n.MsgSettingUrlMustHttp)
 			return
@@ -1465,7 +1465,7 @@ func UpdateUserSetting(c *gin.Context) {
 		upstreamModelUpdateNotifyEnabled = *req.UpstreamModelUpdateNotifyEnabled
 	}
 
-	// 构建设置
+	// Build the settings
 	settings := dto.UserSetting{
 		NotifyType:                       req.QuotaWarningType,
 		QuotaWarningThreshold:            req.QuotaWarningThreshold,
@@ -1474,7 +1474,7 @@ func UpdateUserSetting(c *gin.Context) {
 		RecordIpLog:                      req.RecordIpLog,
 	}
 
-	// 如果是webhook类型,添加webhook相关设置
+	// For the webhook type, add the webhook settings
 	if req.QuotaWarningType == dto.NotifyTypeWebhook {
 		settings.WebhookUrl = req.WebhookUrl
 		if req.WebhookSecret != "" {
@@ -1482,21 +1482,21 @@ func UpdateUserSetting(c *gin.Context) {
 		}
 	}
 
-	// 如果提供了通知邮箱，添加到设置中
+	// If a notification email is provided, add it to the settings
 	if req.QuotaWarningType == dto.NotifyTypeEmail && req.NotificationEmail != "" {
 		settings.NotificationEmail = req.NotificationEmail
 	}
 
-	// 如果是Bark类型，添加Bark URL到设置中
+	// For the Bark type, add the Bark URL to the settings
 	if req.QuotaWarningType == dto.NotifyTypeBark {
 		settings.BarkUrl = req.BarkUrl
 	}
 
-	// 如果是Gotify类型，添加Gotify配置到设置中
+	// For the Gotify type, add the Gotify configuration to the settings
 	if req.QuotaWarningType == dto.NotifyTypeGotify {
 		settings.GotifyUrl = req.GotifyUrl
 		settings.GotifyToken = req.GotifyToken
-		// Gotify优先级范围0-10，超出范围则使用默认值5
+		// Gotify priority ranges from 0-10; out-of-range values use the default of 5
 		if req.GotifyPriority < 0 || req.GotifyPriority > 10 {
 			settings.GotifyPriority = 5
 		} else {
@@ -1504,7 +1504,7 @@ func UpdateUserSetting(c *gin.Context) {
 		}
 	}
 
-	// 更新用户设置
+	// Update user settings
 	user.SetSetting(settings)
 	if err := user.Update(false); err != nil {
 		common.ApiErrorI18n(c, i18n.MsgUpdateFailed)

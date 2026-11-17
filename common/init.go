@@ -50,7 +50,7 @@ func InitEnv() {
 		ss := os.Getenv("SESSION_SECRET")
 		if ss == "random_string" {
 			log.Println("WARNING: SESSION_SECRET is set to the default value 'random_string', please change it to a random string.")
-			log.Println("警告：SESSION_SECRET被设置为默认值'random_string'，请修改为随机字符串。")
+			log.Println("Warning: SESSION_SECRET is set to the default value 'random_string'; please change it to a random string.")
 			log.Fatal("Please set SESSION_SECRET to a random string.")
 		} else {
 			SessionSecret = ss
@@ -136,10 +136,10 @@ func initConstantEnv() {
 	constant.DifyDebug = GetEnvOrDefaultBool("DIFY_DEBUG", true)
 	constant.MaxFileDownloadMB = GetEnvOrDefault("MAX_FILE_DOWNLOAD_MB", 64)
 	constant.StreamScannerMaxBufferMB = GetEnvOrDefault("STREAM_SCANNER_MAX_BUFFER_MB", 128)
-	// MaxRequestBodyMB 请求体最大大小（解压后），用于防止超大请求/zip bomb导致内存暴涨
+	// MaxRequestBodyMB is the maximum request body size (after decompression), preventing memory blowups from oversized requests or zip bombs
 	constant.MaxRequestBodyMB = GetEnvOrDefault("MAX_REQUEST_BODY_MB", 128)
 	constant.AnonymousRequestBodyLimitKB = GetEnvOrDefault("ANONYMOUS_REQUEST_BODY_LIMIT_KB", 512)
-	// ForceStreamOption 覆盖请求参数，强制返回usage信息
+	// ForceStreamOption overrides the request parameter to always return usage information
 	constant.ForceStreamOption = GetEnvOrDefaultBool("FORCE_STREAM_OPTION", true)
 	constant.CountToken = GetEnvOrDefaultBool("CountToken", true)
 	constant.GetMediaToken = GetEnvOrDefaultBool("GET_MEDIA_TOKEN", true)
@@ -148,13 +148,13 @@ func initConstantEnv() {
 	constant.AzureDefaultAPIVersion = GetEnvOrDefaultString("AZURE_DEFAULT_API_VERSION", "2025-04-01-preview")
 	constant.NotifyLimitCount = GetEnvOrDefault("NOTIFY_LIMIT_COUNT", 2)
 	constant.NotificationLimitDurationMinute = GetEnvOrDefault("NOTIFICATION_LIMIT_DURATION_MINUTE", 10)
-	// GenerateDefaultToken 是否生成初始令牌，默认关闭。
+	// GenerateDefaultToken controls whether an initial token is generated; disabled by default.
 	constant.GenerateDefaultToken = GetEnvOrDefaultBool("GENERATE_DEFAULT_TOKEN", false)
-	// 是否启用错误日志
+	// Whether error logging is enabled
 	constant.ErrorLogEnabled = GetEnvOrDefaultBool("ERROR_LOG_ENABLED", false)
-	// 任务轮询时查询的最大数量
+	// Maximum number of records queried during task polling
 	constant.TaskQueryLimit = GetEnvOrDefault("TASK_QUERY_LIMIT", 1000)
-	// 异步任务超时时间（分钟），超过此时间未完成的任务将被标记为失败并退款。0 表示禁用。
+	// Async task timeout in minutes; tasks not completed within this period are marked as failed and refunded. 0 disables it.
 	constant.TaskTimeoutMinutes = GetEnvOrDefault("TASK_TIMEOUT_MINUTES", 1440)
 
 	soraPatchStr := GetEnvOrDefaultString("TASK_PRICE_PATCH", "")

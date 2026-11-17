@@ -19,9 +19,9 @@ For commercial licensing, please contact support@quantumnous.com
 import { t } from 'i18next'
 
 export const ROLE = {
-  GUEST: 0, // 后续如果需要用到这个角色那就再加，同语先留一下
+  GUEST: 0, // Add this role later if needed; kept for now for parity
   USER: 1,
-  DISTRIBUTOR: 5, // 分销商（契约 §2.2）
+  DISTRIBUTOR: 5, // Distributor (contract §2.2)
   ADMIN: 10,
   SUPER_ADMIN: 100,
 } as const

@@ -20,7 +20,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 上游地址
+// Upstream URL
 const (
 	upstreamModelsURL  = "https://basellm.github.io/llm-metadata/api/newapi/models.json"
 	upstreamVendorsURL = "https://basellm.github.io/llm-metadata/api/newapi/vendors.json"
@@ -262,22 +262,22 @@ func ensureVendorID(vendorName string, vendorByName map[string]upstreamVendor, v
 	return 0
 }
 
-// SyncUpstreamModels 同步上游模型与供应商：
-// - 默认仅创建「未配置模型」
-// - 可通过 overwrite 选择性覆盖更新本地已有模型的字段（前提：sync_official <> 0）
+// SyncUpstreamModels syncs upstream models and vendors:
+// - By default only "unconfigured models" are created
+// - overwrite can selectively overwrite fields of existing local models (requires sync_official <> 0)
 func SyncUpstreamModels(c *gin.Context) {
 	var req syncRequest
-	// 允许空体
+	// Allow an empty body
 	_ = c.ShouldBindJSON(&req)
-	// 1) 获取未配置模型列表
+	// 1) Get the list of unconfigured models
 	missing, err := model.GetMissingModels()
 	if err != nil {
 		common.SysError("failed to get missing models: " + err.Error())
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "获取模型列表失败，请稍后重试"})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "Failed to get the model list, please try again later"})
 		return
 	}
 
-	// 若既无缺失模型需要创建，也未指定覆盖更新字段，则无需请求上游数据，直接返回
+	// If there are no missing models to create and no overwrite fields specified, skip the upstream request and return immediately
 	if len(missing) == 0 && len(req.Overwrite) == 0 {
 		modelsURL, vendorsURL := getUpstreamURLs(req.Locale)
 		c.JSON(http.StatusOK, gin.H{
@@ -299,7 +299,7 @@ func SyncUpstreamModels(c *gin.Context) {
 		return
 	}
 
-	// 2) 拉取上游 vendors 与 models
+	// 2) Fetch upstream vendors and models
 	timeoutSec := common.GetEnvOrDefault("SYNC_HTTP_TIMEOUT_SECONDS", 15)
 	ctx, cancel := context.WithTimeout(c.Request.Context(), time.Duration(timeoutSec)*time.Second)
 	defer cancel()
@@ -312,7 +312,7 @@ func SyncUpstreamModels(c *gin.Context) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		// vendor 失败不拦截
+		// A vendor failure is not blocking
 		_ = fetchJSON(ctx, vendorsURL, &vendorsEnv)
 	}()
 	go func() {
@@ -323,11 +323,11 @@ func SyncUpstreamModels(c *gin.Context) {
 	}()
 	wg.Wait()
 	if fetchErr != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "获取上游模型失败: " + fetchErr.Error(), "locale": req.Locale, "source_urls": gin.H{"models_url": modelsURL, "vendors_url": vendorsURL}})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "Failed to get upstream models: " + fetchErr.Error(), "locale": req.Locale, "source_urls": gin.H{"models_url": modelsURL, "vendors_url": vendorsURL}})
 		return
 	}
 
-	// 建立映射
+	// Build the mapping
 	vendorByName := make(map[string]upstreamVendor)
 	for _, v := range vendorsEnv.Data {
 		if v.Name != "" {
@@ -341,7 +341,7 @@ func SyncUpstreamModels(c *gin.Context) {
 		}
 	}
 
-	// 3) 执行同步：仅创建缺失模型；若上游缺失该模型则跳过
+	// 3) Run the sync: create missing models only; skip models missing upstream
 	createdModels := 0
 	createdVendors := 0
 	updatedModels := 0
@@ -349,7 +349,7 @@ func SyncUpstreamModels(c *gin.Context) {
 	createdList := make([]string, 0)
 	updatedList := make([]string, 0)
 
-	// 本地缓存：vendorName -> id
+	// Local cache: vendorName -> id
 	vendorIDCache := make(map[string]int)
 
 	for _, name := range missing {
@@ -359,7 +359,7 @@ func SyncUpstreamModels(c *gin.Context) {
 			continue
 		}
 
-		// 若本地已存在且设置为不同步，则跳过（极端情况：缺失列表与本地状态不同步时）
+		// Skip if the model already exists locally and is set not to sync (edge case: missing list out of sync with local state)
 		var existing model.Model
 		if err := model.DB.Where("model_name = ?", name).First(&existing).Error; err == nil {
 			if existing.SyncOfficial == 0 {
@@ -368,10 +368,10 @@ func SyncUpstreamModels(c *gin.Context) {
 			}
 		}
 
-		// 确保 vendor 存在
+		// Ensure the vendor exists
 		vendorID := ensureVendorID(up.VendorName, vendorByName, vendorIDCache, &createdVendors)
 
-		// 创建模型
+		// Create the model
 		mi := &model.Model{
 			ModelName:   name,
 			Description: up.Description,
@@ -389,9 +389,9 @@ func SyncUpstreamModels(c *gin.Context) {
 		}
 	}
 
-	// 4) 处理可选覆盖（更新本地已有模型的差异字段）
+	// 4) Handle optional overwrite (update differing fields of existing local models)
 	if len(req.Overwrite) > 0 {
-		// vendorIDCache 已用于创建阶段，可复用
+		// vendorIDCache was used during creation and can be reused
 		for _, ow := range req.Overwrite {
 			up, ok := modelByName[ow.ModelName]
 			if !ok {
@@ -402,15 +402,15 @@ func SyncUpstreamModels(c *gin.Context) {
 				continue
 			}
 
-			// 跳过被禁用官方同步的模型
+			// Skip models with official sync disabled
 			if local.SyncOfficial == 0 {
 				continue
 			}
 
-			// 映射 vendor
+			// Map the vendor
 			newVendorID := ensureVendorID(up.VendorName, vendorByName, vendorIDCache, &createdVendors)
 
-			// 应用字段覆盖（事务）
+			// Apply field overrides (transaction)
 			_ = model.DB.Transaction(func(tx *gorm.DB) error {
 				needUpdate := false
 				if containsField(ow.Fields, "description") {
@@ -495,9 +495,9 @@ func chooseStatus(primary, fallback int) int {
 	return 1
 }
 
-// SyncUpstreamPreview 预览上游与本地的差异（仅用于弹窗选择）
+// SyncUpstreamPreview previews upstream-vs-local differences (for dialog selection only)
 func SyncUpstreamPreview(c *gin.Context) {
-	// 1) 拉取上游数据
+	// 1) Fetch upstream data
 	timeoutSec := common.GetEnvOrDefault("SYNC_HTTP_TIMEOUT_SECONDS", 15)
 	ctx, cancel := context.WithTimeout(c.Request.Context(), time.Duration(timeoutSec)*time.Second)
 	defer cancel()
@@ -522,7 +522,7 @@ func SyncUpstreamPreview(c *gin.Context) {
 	}()
 	wg.Wait()
 	if fetchErr != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "获取上游模型失败: " + fetchErr.Error(), "locale": locale, "source_urls": gin.H{"models_url": modelsURL, "vendors_url": vendorsURL}})
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "Failed to get upstream models: " + fetchErr.Error(), "locale": locale, "source_urls": gin.H{"models_url": modelsURL, "vendors_url": vendorsURL}})
 		return
 	}
 
@@ -541,13 +541,13 @@ func SyncUpstreamPreview(c *gin.Context) {
 		}
 	}
 
-	// 2) 本地已有模型
+	// 2) Existing local models
 	var locals []model.Model
 	if len(upstreamNames) > 0 {
 		_ = model.DB.Where("model_name IN ? AND sync_official <> 0", upstreamNames).Find(&locals).Error
 	}
 
-	// 本地 vendor 名称映射
+	// Local vendor name mapping
 	vendorIdSet := make(map[int]struct{})
 	for _, m := range locals {
 		if m.VendorID != 0 {
@@ -567,7 +567,7 @@ func SyncUpstreamPreview(c *gin.Context) {
 		}
 	}
 
-	// 3) 缺失且上游存在的模型
+	// 3) Models missing locally but present upstream
 	missingList, _ := model.GetMissingModels()
 	var missing []string
 	for _, name := range missingList {
@@ -576,7 +576,7 @@ func SyncUpstreamPreview(c *gin.Context) {
 		}
 	}
 
-	// 4) 计算冲突字段
+	// 4) Compute conflicting fields
 	type conflictField struct {
 		Field    string      `json:"field"`
 		Local    interface{} `json:"local"`
@@ -603,7 +603,7 @@ func SyncUpstreamPreview(c *gin.Context) {
 		if strings.TrimSpace(local.Tags) != strings.TrimSpace(up.Tags) {
 			fields = append(fields, conflictField{Field: "tags", Local: local.Tags, Upstream: up.Tags})
 		}
-		// vendor 对比使用名称
+		// Compare vendors by name
 		localVendor := idToVendorName[local.VendorID]
 		if strings.TrimSpace(localVendor) != strings.TrimSpace(up.VendorName) {
 			fields = append(fields, conflictField{Field: "vendor", Local: localVendor, Upstream: up.VendorName})

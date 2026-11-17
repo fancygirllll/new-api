@@ -17,12 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * 对账单共享视图组件（契约附录 D4）
- * Phase 4：管理端只读入口（scope="admin" → A14 /api/commission/statements/summary，跨分销商汇总）
- * Phase 6：组件入共享层供分销商控制台仪表盘可能复用——A14 为 AdminAuth 端点，scope="self"
- *          时服务端无对应端点，组件显示不可用提示而非降级请求（Phase 6 若开放 self 汇总端点，
- *          仅需在 api.ts 增加路径分支，禁止复制本文件派生第二份实现）
- * 复用方式：传 scope prop，禁止复制本文件派生第二份实现
+ * Shared statement view component (contract appendix D4)
+ * Phase 4: admin read-only entry (scope="admin" → A14 /api/commission/statements/summary, cross-distributor summary)
+ * Phase 6: the component lives in the shared layer for possible reuse by the distributor console dashboard--A14 is an AdminAuth endpoint, so with scope="self"
+ *          there is no corresponding server endpoint; the component shows an unavailable hint instead of a degraded request (if Phase 6 opens a self summary endpoint,
+ *          only a path branch in api.ts is needed; do not copy this file to derive a second implementation)
+ * Reuse pattern: pass the scope prop; do not copy this file to derive a second implementation
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -49,7 +49,7 @@ import {
   type StatementScope,
 } from '../api'
 
-/** 上月 YYYY-MM（汇总视图默认期，与出账引擎「上期出账」语义对齐） */
+/** Last month as YYYY-MM (default period for the summary view, aligned with the billing engine's "previous period billing" semantics) */
 function lastMonthLabel(): string {
   const d = new Date()
   d.setDate(1)
@@ -64,8 +64,8 @@ interface StatementSummaryProps {
 }
 
 /**
- * A14 跨分销商汇总（契约附录 D3 冻结形状）：期选择器 + items 表 + totals 卡片。
- * 最小只读：无导出、无图表（契约 D4 范围纪律）。
+ * A14 cross-distributor summary (contract appendix D3 frozen shape): period selector + items table + totals cards.
+ * Minimal read-only: no export, no charts (contract D4 scope discipline).
  */
 export function StatementSummary({ scope }: StatementSummaryProps) {
   const { t } = useTranslation()

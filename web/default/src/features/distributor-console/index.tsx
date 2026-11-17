@@ -65,11 +65,11 @@ const SECTION_META: Record<DistributorSectionId, { titleKey: string }> = {
 }
 
 /**
- * 分销商控制台（D-01 四节 section-registry 组装页，SC-1~SC-5 UI 落点）。
- * 组装纪律（D4 禁复制派生）：账单表/明细/提现记录/申请弹窗全部来自共享组件层
- * 本人视角传参，本文件零复制派生；申请成功后页级 refreshKey 联动刷新
- * 四卡/账单表/预览条/提现记录（Pitfall 5）。
- * 弹窗一律置于 SectionPageLayout.Content 内（Pitfall 4：仅四命名插槽渲染，外部静默不挂载）。
+ * Distributor console (D-01 four-section section-registry assembly page, UI landing point for SC-1~SC-5).
+ * Assembly discipline (D4: no copy-paste derivation): statement table/items/withdrawal records/apply dialog all come from the shared component layer;
+ * parameters are passed for the self view with zero copy-paste derivation here; after a successful application the page-level refreshKey refreshes
+ * the four cards/statement table/preview bar/withdrawal records together (Pitfall 5).
+ * All dialogs live inside SectionPageLayout.Content (Pitfall 4: only the four named slots render; external subtrees are silently not mounted).
  */
 export function DistributorConsole() {
   const { t } = useTranslation()
@@ -89,7 +89,7 @@ export function DistributorConsole() {
   const [customerSelected, setCustomerSelected] =
     useState<DistributorCustomerRow | null>(null)
 
-  // A12 未出账实时预览（D-05 与 A9 分工不合并，statements 节顶部预览条数据面）
+  // A12 unbilled real-time preview (D-05 keeps it separate from A9; data source for the preview bar at the top of the statements section)
   const [current, setCurrent] = useState<CurrentCommission | null>(null)
   useEffect(() => {
     let cancelled = false
@@ -103,7 +103,7 @@ export function DistributorConsole() {
     }
   }, [refreshKey])
 
-  // B4 名下客户分页列表（服务端强制归属过滤，前端零过滤逻辑）
+  // B4 paginated customer list (server-enforced attribution filter; zero filtering logic on the frontend)
   const [customerRows, setCustomerRows] = useState<DistributorCustomerRow[]>([])
   const [customerTotal, setCustomerTotal] = useState(0)
   const [customerPage, setCustomerPage] = useState(1)
@@ -163,7 +163,7 @@ export function DistributorConsole() {
 
           {active === 'overview' && (
             <>
-              {/* G-4 推广卡（B6 aff_code/aff_link/客户数，四卡旁辅助信息卡） */}
+              {/* G-4 promo card (B6 aff_code/aff_link/customer count; auxiliary info card next to the four cards) */}
               <PromoCard refreshKey={refreshKey} />
               <DashboardCards refreshKey={refreshKey} />
             </>
@@ -246,7 +246,7 @@ export function DistributorConsole() {
 
           {active === 'statements' && (
             <>
-              {/* A12 未出账实时预览条（STMT-04「含未出账」，轻量不与 A9 合并） */}
+              {/* A12 unbilled real-time preview bar (STMT-04 "including unbilled"; lightweight, not merged with A9) */}
               <div className='bg-muted/30 flex items-center justify-between rounded-lg border px-4 py-3'>
                 <div className='flex items-center gap-2 text-sm'>
                   <span className='font-medium'>{t('Unbilled Preview')}</span>
@@ -285,7 +285,7 @@ export function DistributorConsole() {
             <WithdrawalTable scope='self' refreshKey={refreshKey} />
           )}
 
-          {/* 弹窗置于 Content 内：SectionPageLayout 仅渲染命名插槽，外部子树不挂载 */}
+          {/* Dialogs live inside Content: SectionPageLayout renders only named slots; external subtrees are not mounted */}
           <CustomerTopupsDialog
             customer={customerSelected}
             onOpenChange={(open) => {

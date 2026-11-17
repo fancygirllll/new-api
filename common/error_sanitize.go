@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// OutboundErrorFallbackMessage 是返回给客户的通用英文兜底文案：
-// 当对外错误信息含中文字符时整体替换为该文案，避免海外客户看到中文报错。
+// OutboundErrorFallbackMessage is the generic English fallback returned to clients:
+// When an outbound error message contains Chinese characters, it is replaced entirely with this text so overseas customers never see Chinese errors.
 const OutboundErrorFallbackMessage = "Service error. Please try again later or contact support."
 
-// ContainsCJK 判断字符串是否包含至少一个 CJK 统一表意文字。
-// 覆盖区间：U+4E00-U+9FFF（基本区）、U+3400-U+4DBF（扩展A）、U+F900-U+FAFF（兼容表意）。
+// ContainsCJK reports whether a string contains at least one CJK unified ideograph.
+// Covered ranges: U+4E00-U+9FFF (basic), U+3400-U+4DBF (extension A), U+F900-U+FAFF (compatibility ideographs).
 func ContainsCJK(s string) bool {
 	for _, r := range s {
 		if (r >= 0x4E00 && r <= 0x9FFF) ||
@@ -22,8 +22,8 @@ func ContainsCJK(s string) bool {
 	return false
 }
 
-// SanitizeOutboundErrorMessage 对出站错误 message 做语言净化：
-// 含中文时替换为 OutboundErrorFallbackMessage，否则原样返回。
+// SanitizeOutboundErrorMessage sanitizes the language of an outbound error message:
+// Replace it with OutboundErrorFallbackMessage when it contains Chinese; otherwise return it unchanged.
 func SanitizeOutboundErrorMessage(msg string) string {
 	if ContainsCJK(msg) {
 		return OutboundErrorFallbackMessage
@@ -31,13 +31,13 @@ func SanitizeOutboundErrorMessage(msg string) string {
 	return msg
 }
 
-// SanitizeErrorChunkData 净化 OpenAI 格式流式错误 chunk：
-// 仅当 chunk 顶层 error 对象的 message 为含中文的字符串时，
-// 将其改写为 OutboundErrorFallbackMessage 后重新序列化返回；
-// 其余情况（含正常内容 chunk、英文错误、非字符串 message、嵌套 error 等）一律原样返回，字节级不变。
+// SanitizeErrorChunkData sanitizes an OpenAI-format streaming error chunk:
+// Only when the message of the top-level error object in the chunk is a string containing Chinese
+// is it rewritten to OutboundErrorFallbackMessage and re-serialized;
+// all other cases (normal content chunks, English errors, non-string messages, nested errors, etc.) are returned unchanged, byte for byte.
 func SanitizeErrorChunkData(data string) string {
-	// 预检：JSON 字符串值内的 "error" 字样必被转义为 \"error\"，与预检串不匹配，
-	// 因此只有顶层存在 error 键的 chunk 才会进入解析。
+	// Pre-check: the word "error" inside a JSON string value is always escaped as \"error\", which does not match the pre-check string,
+	// so only chunks with a top-level error key proceed to parsing.
 	if !strings.Contains(data, `"error"`) {
 		return data
 	}
@@ -62,7 +62,7 @@ func SanitizeErrorChunkData(data string) string {
 		return data
 	}
 
-	// 仅处理字符串形态的 message；数字、对象、数组、null 均视为不匹配而放行。
+	// Only string messages are handled; numbers, objects, arrays, and null are treated as non-matches and passed through.
 	var message string
 	if err := Unmarshal(rawMessage, &message); err != nil {
 		return data

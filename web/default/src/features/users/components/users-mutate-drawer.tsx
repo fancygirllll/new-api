@@ -155,8 +155,8 @@ export function UsersMutateDrawer({
   const selectedRole = form.watch('role')
   const canEditAdminPermissions = currentUser?.role === ROLE.SUPER_ADMIN
   const targetIsAdmin = (selectedRole ?? currentRow?.role ?? 0) >= ROLE.ADMIN
-  // M1 前端等价：编辑模式开放 role 控件——当前登录者 role > 目标 role 或为 root 时可改角色
-  // 契约 §4.1 M1 + 张力点 #3：canManageTargetRole 前端等价，后端真防线在 UpdateUser
+  // M1 frontend equivalent: expose the role control in edit mode--the role can be changed when the current user's role > the target role or is root
+  // Contract §4.1 M1 + tension point #3: canManageTargetRole is the frontend equivalent; the real defense is UpdateUser on the backend
   const canManageRole =
     !isUpdate ||
     currentUser?.role === ROLE.SUPER_ADMIN ||

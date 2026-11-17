@@ -5,33 +5,33 @@ import (
 	"github.com/QuantumNous/new-api/setting/config"
 )
 
-// PerformanceSetting 性能设置配置
+// PerformanceSetting is the performance configuration
 type PerformanceSetting struct {
-	// DiskCacheEnabled 是否启用磁盘缓存（磁盘换内存）
+	// DiskCacheEnabled controls whether disk caching is enabled (using disk instead of memory)
 	DiskCacheEnabled bool `json:"disk_cache_enabled"`
-	// DiskCacheThresholdMB 触发磁盘缓存的请求体大小阈值（MB）
+	// DiskCacheThresholdMB is the request body size threshold that triggers disk caching (MB)
 	DiskCacheThresholdMB int `json:"disk_cache_threshold_mb"`
-	// DiskCacheMaxSizeMB 磁盘缓存最大总大小（MB）
+	// DiskCacheMaxSizeMB is the maximum total disk cache size (MB)
 	DiskCacheMaxSizeMB int `json:"disk_cache_max_size_mb"`
-	// DiskCachePath 磁盘缓存目录
+	// DiskCachePath is the disk cache directory
 	DiskCachePath string `json:"disk_cache_path"`
 
-	// MonitorEnabled 是否启用性能监控
+	// MonitorEnabled controls whether performance monitoring is enabled
 	MonitorEnabled bool `json:"monitor_enabled"`
-	// MonitorCPUThreshold CPU 使用率阈值（%）
+	// MonitorCPUThreshold is the CPU usage threshold (%)
 	MonitorCPUThreshold int `json:"monitor_cpu_threshold"`
-	// MonitorMemoryThreshold 内存使用率阈值（%）
+	// MonitorMemoryThreshold is the memory usage threshold (%)
 	MonitorMemoryThreshold int `json:"monitor_memory_threshold"`
-	// MonitorDiskThreshold 磁盘使用率阈值（%）
+	// MonitorDiskThreshold is the disk usage threshold (%)
 	MonitorDiskThreshold int `json:"monitor_disk_threshold"`
 }
 
-// 默认配置
+// Default configuration
 var performanceSetting = PerformanceSetting{
 	DiskCacheEnabled:     false,
-	DiskCacheThresholdMB: 10,   // 超过 10MB 使用磁盘缓存
-	DiskCacheMaxSizeMB:   1024, // 最大 1GB 磁盘缓存
-	DiskCachePath:        "",   // 空表示使用系统临时目录
+	DiskCacheThresholdMB: 10,   // Use disk caching above 10MB
+	DiskCacheMaxSizeMB:   1024, // Maximum disk cache of 1GB
+	DiskCachePath:        "",   // Empty means the system temporary directory
 
 	MonitorEnabled:         true,
 	MonitorCPUThreshold:    90,
@@ -40,13 +40,13 @@ var performanceSetting = PerformanceSetting{
 }
 
 func init() {
-	// 注册到全局配置管理器
+	// Register with the global config manager
 	config.GlobalConfig.Register("performance_setting", &performanceSetting)
-	// 同步初始配置到 common 包
+	// Sync the initial configuration to the common package
 	syncToCommon()
 }
 
-// syncToCommon 将配置同步到 common 包
+// syncToCommon synchronizes the configuration to the common package
 func syncToCommon() {
 	common.SetDiskCacheConfig(common.DiskCacheConfig{
 		Enabled:     performanceSetting.DiskCacheEnabled,
@@ -63,23 +63,23 @@ func syncToCommon() {
 	})
 }
 
-// GetPerformanceSetting 获取性能设置
+// GetPerformanceSetting returns the performance settings
 func GetPerformanceSetting() *PerformanceSetting {
 	return &performanceSetting
 }
 
-// UpdateAndSync 更新配置并同步到 common 包
-// 当配置从数据库加载后，需要调用此函数同步
+// UpdateAndSync updates the configuration and synchronizes it to the common package
+// Call this after the configuration is loaded from the database to synchronize it
 func UpdateAndSync() {
 	syncToCommon()
 }
 
-// GetCacheStats 获取缓存统计信息（代理到 common 包）
+// GetCacheStats returns cache statistics (delegates to the common package)
 func GetCacheStats() common.DiskCacheStats {
 	return common.GetDiskCacheStats()
 }
 
-// ResetStats 重置统计信息
+// ResetStats resets the statistics
 func ResetStats() {
 	common.ResetDiskCacheStats()
 }

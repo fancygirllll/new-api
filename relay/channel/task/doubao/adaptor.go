@@ -134,7 +134,8 @@ func (a *TaskAdaptor) BuildRequestHeader(_ *gin.Context, req *http.Request, _ *r
 	return nil
 }
 
-// EstimateBilling 根据请求 metadata 中的输出分辨率与是否包含视频输入，返回相对基准价的计费 OtherRatio。
+// EstimateBilling returns the billing OtherRatio relative to the base price based on the output
+// resolution and whether the input contains video in the request metadata.
 func (a *TaskAdaptor) EstimateBilling(c *gin.Context, info *relaycommon.RelayInfo) map[string]float64 {
 	req, err := relaycommon.GetTaskRequest(c)
 	if err != nil {
@@ -149,8 +150,8 @@ func (a *TaskAdaptor) EstimateBilling(c *gin.Context, info *relaycommon.RelayInf
 	return map[string]float64{"video_input": ratio}
 }
 
-// hasVideoInMetadata 直接检查 metadata 的 content 数组是否包含 video_url 条目，
-// 避免构建完整的上游 requestPayload。
+// hasVideoInMetadata checks directly whether the metadata content array contains a video_url entry,
+// avoiding building the full upstream requestPayload.
 func hasVideoInMetadata(metadata map[string]interface{}) bool {
 	if metadata == nil {
 		return false
@@ -328,7 +329,7 @@ func (a *TaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskInfo, e
 		taskResult.Status = model.TaskStatusSuccess
 		taskResult.Progress = "100%"
 		taskResult.Url = resTask.Content.VideoURL
-		// 解析 usage 信息用于按倍率计费
+		// Parse usage information for ratio-based billing.
 		taskResult.CompletionTokens = resTask.Usage.CompletionTokens
 		taskResult.TotalTokens = resTask.Usage.TotalTokens
 	case "failed":

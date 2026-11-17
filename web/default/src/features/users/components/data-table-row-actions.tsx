@@ -144,9 +144,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
   const isDisabled = user.status === USER_STATUS.DISABLED
   const isAdmin = user.role >= USER_ROLE.ADMIN
-  // 行用户为 root（禁用对其的破坏性操作）
+  // Row user is root (destructive operations on them are disabled)
   const isRootUser = user.role === USER_ROLE.ROOT
-  // Obs-2：查看者为 root（B2 指定归属 RootAuth——非 root admin 的死入口收窄）
+  // Obs-2: the viewer is root (B2 set-attribution requires RootAuth--narrows the dead entry for non-root admins)
   const currentUser = useAuthStore((s) => s.auth.user)
   const isRoot = currentUser?.role === ROLE.SUPER_ADMIN
 
@@ -237,7 +237,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuShortcut>
         </DropdownMenuItem>
 
-        {/* G-1 客户列表（仅 role=5 分销商行，B7 契约附录 G） */}
+        {/* G-1 Customer list (only role=5 distributor rows, B7 contract appendix G) */}
         {user.role === USER_ROLE.DISTRIBUTOR && (
           <DropdownMenuItem
             onSelect={(event) => {
@@ -252,7 +252,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
         )}
 
-        {/* G-2 指定归属（B2 RootAuth，Obs-2：仅 root 查看者可见——服务端拒绝已存在，此处消死入口） */}
+        {/* G-2 Set attribution (B2 RootAuth; Obs-2: visible only to root viewers--the server already rejects this, removing the dead entry here) */}
         {isRoot && (
           <DropdownMenuItem
             onSelect={(event) => {
@@ -267,7 +267,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
         )}
 
-        {/* G-3 归属审计（B3 AdminAuth，按该用户过滤） */}
+        {/* G-3 Attribution audit (B3 AdminAuth, filtered by this user) */}
         <DropdownMenuItem
           onSelect={(event) => {
             event.preventDefault()
@@ -360,7 +360,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         onSuccess={triggerRefresh}
       />
 
-      {/* G-1 客户列表弹窗（B7，行形状与 B4 一致） */}
+      {/* G-1 Customer list dialog (B7, row shape matches B4) */}
       <DistributorCustomersDialog
         open={customersDialogOpen}
         distributorId={user.id}
@@ -368,7 +368,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         onOpenChange={setCustomersDialogOpen}
       />
 
-      {/* G-2 指定归属弹窗（B2，成功后刷新列表） */}
+      {/* G-2 Set-attribution dialog (B2, refresh the list on success) */}
       <AttributionBindDialog
         open={bindDialogOpen}
         userId={user.id}
@@ -377,7 +377,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         onSuccess={triggerRefresh}
       />
 
-      {/* G-3 归属审计抽屉（B3 user_id 过滤） */}
+      {/* G-3 Attribution audit drawer (B3 user_id filter) */}
       <AttributionChangesSheet
         open={auditSheetOpen}
         userId={user.id}

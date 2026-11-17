@@ -17,9 +17,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * 分销商控制台 overview 四卡（CUST-03/D-04）。
- * 数据面唯一事实源 = A9 服务端聚合（会话派生），前端直用 cents/count 渲染，
- * 零金额二次计算（CONTEXT specifics：任何汇总/换算只允许展示层 formatCents）。
+ * Distributor console overview four cards (CUST-03/D-04).
+ * Single source of truth for data = A9 server aggregate (session-derived); the frontend renders cents/count directly,
+ * with no secondary amount computation (CONTEXT specifics: any aggregation/conversion is only allowed in the display layer via formatCents).
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -38,11 +38,11 @@ import {
 } from '../api'
 
 interface DashboardCardsProps {
-  /** 页级联动刷新键（提现申请/驳回/打款后四卡重取，Pitfall 5） */
+  /** Page-level refresh key (the four cards refetch after apply/reject/mark-paid, Pitfall 5) */
   refreshKey?: number
 }
 
-/** overview 四卡：当期未出账 / 历史已出账 / 已提现 / 待提现（各配笔数副文本） */
+/** Overview four cards: current unbilled / historical billed / withdrawn / pending withdrawal (each with a count subtext) */
 export function DashboardCards({ refreshKey }: DashboardCardsProps) {
   const { t } = useTranslation()
   const [dash, setDash] = useState<CommissionDashboard | null>(null)
@@ -53,7 +53,7 @@ export function DashboardCards({ refreshKey }: DashboardCardsProps) {
     try {
       const res = await fetchDashboard()
       if (res.success && res.data) {
-        setDash(res.data) // 服务端聚合值直用，禁前端再算
+        setDash(res.data) // Use the server aggregate directly; never recompute on the frontend
       }
     } finally {
       setLoading(false)

@@ -19,8 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { createSectionRegistry } from '@/features/system-settings/utils/section-registry'
 
 /**
- * 提现审核工作台 section 定义（Phase 5 最小范围：仅 list 一节）。
- * 内容由工作台路由组件渲染（操作弹窗/快照明细态需组件内状态）。
+ * Withdrawal review workbench section definitions (Phase 5 minimal scope: only the list section).
+ * Content is rendered by the workbench route component (action dialogs/statement detail state need component state).
  */
 const COMMISSION_WITHDRAWALS_SECTIONS = [
   {

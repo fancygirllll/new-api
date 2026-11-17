@@ -262,7 +262,7 @@ export function FetchModelsDialog({
   const newModelsByCategory = categorizeModels(newModels)
   const existingModelsByCategory = categorizeModels(existingFilteredModels)
 
-  // 厂商分类按 a-z 排序，Other 放最后，便于查找
+  // Sort provider categories a-z, with Other last for easier lookup
   const getSortedCategoryEntries = (
     categories: Record<string, string[]>
   ): [string, string[]][] =>

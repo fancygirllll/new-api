@@ -285,7 +285,7 @@ function WeightCell({ channel }: { channel: Channel }) {
 
 /**
  * Inline balance/used values longer than this switch to locale-aware compact
- * notation (e.g. "$28万"); the precise value stays available in the tooltip.
+ * notation (e.g. "$28K"); the precise value stays available in the tooltip.
  */
 const MAX_INLINE_BALANCE_CHARS = 8
 const SENSITIVE_MASK = '••••'
@@ -605,7 +605,7 @@ export function useChannelsColumns(
                   )}
                 </Button>
                 <div className='flex items-center gap-1.5'>
-                  <span className='font-semibold'>Tag：{tag}</span>
+                  <span className='font-semibold'>Tag: {tag}</span>
                   <StatusBadge
                     label={`${childrenCount} channels`}
                     variant='blue'

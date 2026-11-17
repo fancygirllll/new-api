@@ -214,7 +214,7 @@ export async function adminUnbindCustomOAuth(
 // Attribution ops APIs (Phase 6 plan 6.1 gap closure G-1/G-2/G-3)
 // ============================================================================
 
-/** B7 分页信封（PageInfo 形状） */
+/** B7 pagination envelope (PageInfo shape) */
 export interface AdminDistributorCustomersPage {
   page: number
   page_size: number
@@ -223,10 +223,10 @@ export interface AdminDistributorCustomersPage {
 }
 
 /**
- * B7 管理员查看分销商客户列表（AdminAuth）。
- * 端点：GET /api/attribution/distributor/:id/customers?p=&page_size=（契约附录 G，plan 6.1 G-1）。
- * 行形状与 B4 distributorCustomerItem 逐字一致（type 复用单一来源）；
- * total_topup_cents/total_commission_cents 为 int64 分，展示层 formatCents 换算。
+ * B7 Admin views a distributor's customers (AdminAuth).
+ * Endpoint: GET /api/attribution/distributor/:id/customers?p=&page_size= (contract appendix G, plan 6.1 G-1).
+ * Row shape matches B4 distributorCustomerItem verbatim (the type is reused from a single source);
+ * total_topup_cents/total_commission_cents are int64 cents; the display layer converts via formatCents.
  */
 export async function fetchAdminDistributorCustomers(
   distributorId: number,
@@ -241,8 +241,8 @@ export async function fetchAdminDistributorCustomers(
 }
 
 /**
- * B2 管理员手动改绑（RootAuth；reason 必填，服务端同事务写审计）。
- * 服务端校验是唯一业务防线，失败信封 message 原样回显。
+ * B2 Admin manual rebind (RootAuth; reason required; the server writes the audit record in the same transaction).
+ * Server-side validation is the only business defense; the failure envelope message is echoed verbatim.
  */
 export async function adminBindAttribution(
   userId: number,
@@ -257,7 +257,7 @@ export async function adminBindAttribution(
   return res.data
 }
 
-/** B3 归属审计行（model/attribution_change.go json tag 逐字） */
+/** B3 attribution audit row (model/attribution_change.go json tag verbatim) */
 export interface AttributionChangeRow {
   id: number
   user_id: number
@@ -270,7 +270,7 @@ export interface AttributionChangeRow {
 }
 
 /**
- * B3 归属审计查询（AdminAuth；支持 user_id 过滤 + 分页）。
+ * B3 attribution audit query (AdminAuth; supports user_id filtering + pagination).
  */
 export async function fetchAttributionChanges(params: {
   userId?: number

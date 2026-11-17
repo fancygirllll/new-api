@@ -247,7 +247,7 @@ export interface UserWalletData {
 /**
  * Topup record status
  */
-/** TopUp 状态五值（common/constants.go + 契约附录 C1：refunded 由作废动作产生） */
+/** Five TopUp statuses (common/constants.go + contract appendix C1: refunded is produced by the void action) */
 export type TopupStatus = 'success' | 'pending' | 'expired' | 'failed' | 'refunded'
 
 /**

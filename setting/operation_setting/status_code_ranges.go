@@ -120,7 +120,7 @@ func ParseHTTPStatusCodeRanges(input string) ([]StatusCodeRange, error) {
 		return nil, nil
 	}
 
-	input = strings.NewReplacer("，", ",").Replace(input)
+	input = strings.NewReplacer("\uFF0C", ",").Replace(input)
 	segments := strings.Split(input, ",")
 
 	var ranges []StatusCodeRange

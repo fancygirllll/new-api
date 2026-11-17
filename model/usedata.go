@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// QuotaData 柱状图数据
+// QuotaData is the bar chart data
 type QuotaData struct {
 	Id        int    `json:"id"`
 	UserID    int    `json:"user_id" gorm:"index"`
@@ -41,7 +41,7 @@ type QuotaDataLogParams struct {
 func UpdateQuotaData() {
 	for {
 		if common.DataExportEnabled {
-			common.SysLog("正在更新数据看板数据...")
+			common.SysLog("Updating dashboard data...")
 			SaveQuotaDataCache()
 		}
 		time.Sleep(time.Duration(common.DataExportInterval) * time.Minute)
@@ -76,7 +76,7 @@ func logQuotaDataCache(quotaData *QuotaData) {
 }
 
 func LogQuotaData(params QuotaDataLogParams) {
-	// 只精确到小时
+	// Hourly granularity only
 	createdAt := params.CreatedAt - (params.CreatedAt % 3600)
 	quotaData := &QuotaData{
 		UserID:    params.UserID,
@@ -101,10 +101,10 @@ func SaveQuotaDataCache() {
 	CacheQuotaDataLock.Lock()
 	defer CacheQuotaDataLock.Unlock()
 	size := len(CacheQuotaData)
-	// 如果缓存中有数据，就保存到数据库中
-	// 1. 先查询数据库中是否有数据
-	// 2. 如果有数据，就更新数据
-	// 3. 如果没有数据，就插入数据
+	// If the cache has data, save it to the database
+	// 1. First query whether the data exists in the database
+	// 2. If it exists, update it
+	// 3. If it does not exist, insert it
 	for _, quotaData := range CacheQuotaData {
 		quotaDataDB := &QuotaData{}
 		DB.Table("quota_data").
@@ -121,7 +121,7 @@ func SaveQuotaDataCache() {
 		}
 	}
 	CacheQuotaData = make(map[string]*QuotaData)
-	common.SysLog(fmt.Sprintf("保存数据看板数据成功，共保存%d条数据", size))
+	common.SysLog(fmt.Sprintf("Dashboard data saved successfully, %d record(s) saved", size))
 }
 
 func increaseQuotaData(quotaData *QuotaData) {
@@ -140,7 +140,7 @@ func increaseQuotaData(quotaData *QuotaData) {
 
 func GetQuotaDataByUsername(username string, startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
 	var quotaDatas []*QuotaData
-	// 从quota_data表中查询数据
+	// Query data from the quota_data table
 	err = DB.Table("quota_data").
 		Select("user_id, username, model_name, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
 		Where("username = ? and created_at >= ? and created_at <= ?", username, startTime, endTime).
@@ -151,7 +151,7 @@ func GetQuotaDataByUsername(username string, startTime int64, endTime int64) (qu
 
 func GetQuotaDataByUserId(userId int, startTime int64, endTime int64) (quotaData []*QuotaData, err error) {
 	var quotaDatas []*QuotaData
-	// 从quota_data表中查询数据
+	// Query data from the quota_data table
 	err = DB.Table("quota_data").
 		Select("user_id, username, model_name, created_at, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used").
 		Where("user_id = ? and created_at >= ? and created_at <= ?", userId, startTime, endTime).
@@ -175,7 +175,7 @@ func GetAllQuotaDates(startTime int64, endTime int64, username string) (quotaDat
 		return GetQuotaDataByUsername(username, startTime, endTime)
 	}
 	var quotaDatas []*QuotaData
-	// 从quota_data表中查询数据
+	// Query data from the quota_data table
 	// only select model_name, sum(count) as count, sum(quota) as quota, model_name, created_at from quota_data group by model_name, created_at;
 	//err = DB.Table("quota_data").Where("created_at >= ? and created_at <= ?", startTime, endTime).Find(&quotaDatas).Error
 	err = DB.Table("quota_data").Select("model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, created_at").Where("created_at >= ? and created_at <= ?", startTime, endTime).Group("model_name, created_at").Find(&quotaDatas).Error

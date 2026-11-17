@@ -35,21 +35,21 @@ type ImageRequest struct {
 	WatermarkEnabled json.RawMessage `json:"watermark_enabled,omitempty"`
 	UserId           json.RawMessage `json:"user_id,omitempty"`
 	Image            json.RawMessage `json:"image,omitempty"`
-	// 用匿名参数接收额外参数
+	// Receive extra parameters via an anonymous field
 	Extra map[string]json.RawMessage `json:"-"`
 }
 
 func (i *ImageRequest) UnmarshalJSON(data []byte) error {
-	// 先解析成 map[string]interface{}
+	// First parse into map[string]interface{}
 	var rawMap map[string]json.RawMessage
 	if err := common.Unmarshal(data, &rawMap); err != nil {
 		return err
 	}
 
-	// 用 struct tag 获取所有已定义字段名
+	// Collect all defined field names from struct tags
 	knownFields := GetJSONFieldNames(reflect.TypeOf(*i))
 
-	// 再正常解析已定义字段
+	// Then parse the defined fields normally
 	type Alias ImageRequest
 	var known Alias
 	if err := common.Unmarshal(data, &known); err != nil {
@@ -57,7 +57,7 @@ func (i *ImageRequest) UnmarshalJSON(data []byte) error {
 	}
 	*i = ImageRequest(known)
 
-	// 提取多余字段
+	// Extract the extra fields
 	i.Extra = make(map[string]json.RawMessage)
 	for k, v := range rawMap {
 		if _, ok := knownFields[k]; !ok {
@@ -67,9 +67,9 @@ func (i *ImageRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// 序列化时需要重新把字段平铺
+// Flatten the fields again when serializing
 func (r ImageRequest) MarshalJSON() ([]byte, error) {
-	// 将已定义字段转为 map
+	// Convert the defined fields to a map
 	type Alias ImageRequest
 	alias := Alias(r)
 	base, err := common.Marshal(alias)
@@ -82,8 +82,8 @@ func (r ImageRequest) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	// 不能合并ExtraFields！！！！！！！！
-	// 合并 ExtraFields
+	// Do not merge ExtraFields
+	// Merge ExtraFields
 	//for k, v := range r.Extra {
 	//	if _, exists := baseMap[k]; !exists {
 	//		baseMap[k] = v
@@ -98,7 +98,7 @@ func GetJSONFieldNames(t reflect.Type) map[string]struct{} {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		// 跳过匿名字段（例如 ExtraFields）
+		// Skip anonymous fields (e.g. ExtraFields)
 		if field.Anonymous {
 			continue
 		}
@@ -108,7 +108,7 @@ func GetJSONFieldNames(t reflect.Type) map[string]struct{} {
 			continue
 		}
 
-		// 取逗号前字段名（排除 omitempty 等）
+		// Take the field name before the comma (excluding omitempty, etc.)
 		name := tag
 		if commaIdx := indexComma(tag); commaIdx != -1 {
 			name = tag[:commaIdx]

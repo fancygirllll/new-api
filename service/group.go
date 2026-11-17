@@ -12,25 +12,25 @@ func GetUserUsableGroups(userGroup string) map[string]string {
 	if userGroup != "" {
 		specialSettings, b := ratio_setting.GetGroupRatioSetting().GroupSpecialUsableGroup.Get(userGroup)
 		if b {
-			// 处理特殊可用分组
+			// Handle special usable groups
 			for specialGroup, desc := range specialSettings {
 				if strings.HasPrefix(specialGroup, "-:") {
-					// 移除分组
+					// Remove the group
 					groupToRemove := strings.TrimPrefix(specialGroup, "-:")
 					delete(groupsCopy, groupToRemove)
 				} else if strings.HasPrefix(specialGroup, "+:") {
-					// 添加分组
+					// Add the group
 					groupToAdd := strings.TrimPrefix(specialGroup, "+:")
 					groupsCopy[groupToAdd] = desc
 				} else {
-					// 直接添加分组
+					// Add the group directly
 					groupsCopy[specialGroup] = desc
 				}
 			}
 		}
-		// 如果userGroup不在UserUsableGroups中，返回UserUsableGroups + userGroup
+		// If userGroup is not in UserUsableGroups, return UserUsableGroups + userGroup
 		if _, ok := groupsCopy[userGroup]; !ok {
-			groupsCopy[userGroup] = "用户分组"
+			groupsCopy[userGroup] = "User group"
 		}
 	}
 	return groupsCopy
@@ -41,7 +41,7 @@ func GroupInUserUsableGroups(userGroup, groupName string) bool {
 	return ok
 }
 
-// GetUserAutoGroup 根据用户分组获取自动分组设置
+// GetUserAutoGroup returns the auto group setting for a user group
 func GetUserAutoGroup(userGroup string) []string {
 	groups := GetUserUsableGroups(userGroup)
 	autoGroups := make([]string, 0)
@@ -53,9 +53,9 @@ func GetUserAutoGroup(userGroup string) []string {
 	return autoGroups
 }
 
-// GetUserGroupRatio 获取用户使用某个分组的倍率
-// userGroup 用户分组
-// group 需要获取倍率的分组
+// GetUserGroupRatio returns the ratio for a user using a given group
+// userGroup is the user group
+// group is the group whose ratio is requested
 func GetUserGroupRatio(userGroup, group string) float64 {
 	ratio, ok := ratio_setting.GetGroupGroupRatio(userGroup, group)
 	if ok {

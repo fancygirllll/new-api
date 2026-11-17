@@ -327,7 +327,7 @@ export type BillingSettings = {
   'checkin_setting.enabled': boolean
   'checkin_setting.min_quota': number
   'checkin_setting.max_quota': number
-  // 结算设置（契约 §2.4 + §3.4，SETT-01）：服务端 02-03 强制值域校验，前端校验仅 UX 层
+  // Billing settings (contract §2.4 + §3.4, SETT-01): the server enforces the 02-03 value-range validation; frontend validation is UX-only
   CommissionEnabled: boolean
   CommissionPayoutDay: number
   AffRebindWindowMode: 'days' | 'unlimited'

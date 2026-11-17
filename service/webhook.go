@@ -15,7 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/setting/system_setting"
 )
 
-// WebhookPayload webhook 通知的负载数据
+// WebhookPayload is the webhook notification payload
 type WebhookPayload struct {
 	Type      string        `json:"type"`
 	Title     string        `json:"title"`
@@ -24,22 +24,22 @@ type WebhookPayload struct {
 	Timestamp int64         `json:"timestamp"`
 }
 
-// generateSignature 生成 webhook 签名
+// generateSignature generates the webhook signature
 func generateSignature(secret string, payload []byte) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// SendWebhookNotify 发送 webhook 通知
+// SendWebhookNotify sends a webhook notification
 func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error {
-	// 处理占位符
+	// Process placeholders
 	content := data.Content
 	for _, value := range data.Values {
 		content = fmt.Sprintf(content, value)
 	}
 
-	// 构建 webhook 负载
+	// Build the webhook payload
 	payload := WebhookPayload{
 		Type:      data.Type,
 		Title:     data.Title,
@@ -48,18 +48,18 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 		Timestamp: time.Now().Unix(),
 	}
 
-	// 序列化负载
+	// Serialize the payload
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal webhook payload: %v", err)
 	}
 
-	// 创建 HTTP 请求
+	// Create the HTTP request
 	var req *http.Request
 	var resp *http.Response
 
 	if system_setting.EnableWorker() {
-		// 构建worker请求数据
+		// Build the worker request payload
 		workerReq := &WorkerRequest{
 			URL:    webhookURL,
 			Key:    system_setting.WorkerValidKey,
@@ -70,7 +70,7 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 			Body: payloadBytes,
 		}
 
-		// 如果有secret，添加签名到headers
+		// If a secret is configured, add the signature to the headers
 		if secret != "" {
 			signature := generateSignature(secret, payloadBytes)
 			workerReq.Headers["X-Webhook-Signature"] = signature
@@ -83,12 +83,12 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 		}
 		defer resp.Body.Close()
 
-		// 检查响应状态
+		// Check the response status
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("webhook request failed with status code: %d", resp.StatusCode)
 		}
 	} else {
-		// SSRF防护：验证Webhook URL（非Worker模式）
+		// SSRF protection: validate the Webhook URL (non-worker mode)
 		fetchSetting := system_setting.GetFetchSetting()
 		if err := common.ValidateURLWithFetchSetting(webhookURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
 			return fmt.Errorf("request reject: %v", err)
@@ -99,16 +99,16 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 			return fmt.Errorf("failed to create webhook request: %v", err)
 		}
 
-		// 设置请求头
+		// Set request headers
 		req.Header.Set("Content-Type", "application/json")
 
-		// 如果有 secret，生成签名
+		// If a secret is configured, generate the signature
 		if secret != "" {
 			signature := generateSignature(secret, payloadBytes)
 			req.Header.Set("X-Webhook-Signature", signature)
 		}
 
-		// 发送请求
+		// Send the request
 		client := GetHttpClient()
 		resp, err = client.Do(req)
 		if err != nil {
@@ -116,7 +116,7 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 		}
 		defer resp.Body.Close()
 
-		// 检查响应状态
+		// Check the response status
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("webhook request failed with status code: %d", resp.StatusCode)
 		}

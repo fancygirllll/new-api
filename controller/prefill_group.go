@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetPrefillGroups 获取预填组列表，可通过 ?type=xxx 过滤
+// GetPrefillGroups returns the prefill group list, filterable via ?type=xxx
 func GetPrefillGroups(c *gin.Context) {
 	groupType := c.Query("type")
 	groups, err := model.GetAllPrefillGroups(groupType)
@@ -20,7 +20,7 @@ func GetPrefillGroups(c *gin.Context) {
 	common.ApiSuccess(c, groups)
 }
 
-// CreatePrefillGroup 创建新的预填组
+// CreatePrefillGroup creates a new prefill group
 func CreatePrefillGroup(c *gin.Context) {
 	var g model.PrefillGroup
 	if err := c.ShouldBindJSON(&g); err != nil {
@@ -28,15 +28,15 @@ func CreatePrefillGroup(c *gin.Context) {
 		return
 	}
 	if g.Name == "" || g.Type == "" {
-		common.ApiErrorMsg(c, "组名称和类型不能为空")
+		common.ApiErrorMsg(c, "Group name and type cannot be empty")
 		return
 	}
-	// 创建前检查名称
+	// Check the name before creating
 	if dup, err := model.IsPrefillGroupNameDuplicated(0, g.Name); err != nil {
 		common.ApiError(c, err)
 		return
 	} else if dup {
-		common.ApiErrorMsg(c, "组名称已存在")
+		common.ApiErrorMsg(c, "Group name already exists")
 		return
 	}
 
@@ -47,7 +47,7 @@ func CreatePrefillGroup(c *gin.Context) {
 	common.ApiSuccess(c, &g)
 }
 
-// UpdatePrefillGroup 更新预填组
+// UpdatePrefillGroup updates a prefill group
 func UpdatePrefillGroup(c *gin.Context) {
 	var g model.PrefillGroup
 	if err := c.ShouldBindJSON(&g); err != nil {
@@ -55,15 +55,15 @@ func UpdatePrefillGroup(c *gin.Context) {
 		return
 	}
 	if g.Id == 0 {
-		common.ApiErrorMsg(c, "缺少组 ID")
+		common.ApiErrorMsg(c, "Missing group ID")
 		return
 	}
-	// 名称冲突检查
+	// Check for name conflicts
 	if dup, err := model.IsPrefillGroupNameDuplicated(g.Id, g.Name); err != nil {
 		common.ApiError(c, err)
 		return
 	} else if dup {
-		common.ApiErrorMsg(c, "组名称已存在")
+		common.ApiErrorMsg(c, "Group name already exists")
 		return
 	}
 
@@ -74,7 +74,7 @@ func UpdatePrefillGroup(c *gin.Context) {
 	common.ApiSuccess(c, &g)
 }
 
-// DeletePrefillGroup 删除预填组
+// DeletePrefillGroup deletes a prefill group
 func DeletePrefillGroup(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

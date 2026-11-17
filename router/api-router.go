@@ -15,7 +15,7 @@ func SetApiRouter(router *gin.Engine) {
 	apiRouter := router.Group("/api")
 	apiRouter.Use(middleware.RouteTag("api"))
 	apiRouter.Use(gzip.Gzip(gzip.DefaultCompression))
-	apiRouter.Use(middleware.BodyStorageCleanup()) // 清理请求体存储
+	apiRouter.Use(middleware.BodyStorageCleanup()) // Clean up the request body storage
 	apiRouter.Use(middleware.GlobalAPIRateLimit())
 	anonymousRequestBodyLimit := middleware.AnonymousRequestBodyLimit()
 	{
@@ -190,7 +190,7 @@ func SetApiRouter(router *gin.Engine) {
 			optionRoute.GET("/channel_affinity_cache", controller.GetChannelAffinityCacheStats)
 			optionRoute.DELETE("/channel_affinity_cache", controller.ClearChannelAffinityCache)
 			optionRoute.POST("/rest_model_ratio", controller.ResetModelRatio)
-			optionRoute.POST("/migrate_console_setting", controller.MigrateConsoleSetting) // 用于迁移检测的旧键，下个版本会删除
+			optionRoute.POST("/migrate_console_setting", controller.MigrateConsoleSetting) // Legacy key used for migration detection; will be removed in the next version
 			optionRoute.GET("/waffo-pancake/catalog", controller.ListWaffoPancakeCatalog)
 			optionRoute.POST("/waffo-pancake/pair", controller.CreateWaffoPancakePair)
 			optionRoute.POST("/waffo-pancake/save", controller.SaveWaffoPancake)
@@ -229,72 +229,72 @@ func SetApiRouter(router *gin.Engine) {
 		registerAuthzRoutes(apiRouter)
 
 		// ========================================================================
-		// Phase 2: 分销商角色与客户归属地基地基路由
-		// B 域（B1-B6）：02-03 已替换为真实 controller（本 plan 交付）。
-		// A 域：A1-A3 已由 03-02 替换为真实 controller；A4-A8 已由 04-02/04-03 替换为
-		// 真实 controller；A9-A12 已由 06-01 替换为真实 controller（占位全部退役）。
-		// 权限模型（契约 §2.2 + §4.2/4.3）：
-		//   - 分销商侧（B4/B5/B6/A9/A10/A11/A12）→ DistributorAuth 精确匹配 role==5
-		//   - 管理员侧（A1/A2/A3/A4/A5/A6/A7/A8/B3）→ AdminAuth 阈值 minRole=10
-		//   - 超管侧（A7/A8/B2）→ RootAuth 阈值 minRole=100
+		// Phase 2: distributor role and customer attribution routes
+		// Domain B (B1-B6): replaced with real controllers in 02-03 (delivered by this plan).
+		// Domain A: A1-A3 were replaced with real controllers by 03-02; A4-A8 were replaced by 04-02/04-03 with
+		// real controllers; A9-A12 were replaced with real controllers by 06-01 (all placeholders retired).
+		// Permission model (contract §2.2 + §4.2/4.3):
+		//   - Distributor side (B4/B5/B6/A9/A10/A11/A12) -> DistributorAuth with exact match on role==5
+		//   - Admin side (A1/A2/A3/A4/A5/A6/A7/A8/B3) -> AdminAuth with threshold minRole=10
+		//   - Root side (A7/A8/B2) -> RootAuth with threshold minRole=100
 		// ========================================================================
 
-		// B1 自助补绑（UserAuth，挂 selfRoute 同级，便于复用 session 用户身份）
+		// B1 self-service re-binding (UserAuth, mounted alongside selfRoute to reuse the session user identity)
 		apiRouter.POST("/user/aff_rebind", middleware.UserAuth(), controller.AffRebind)
 
-		// B 域：归属审计（B2 RootAuth / B3 AdminAuth）
+		// Domain B: attribution audit (B2 RootAuth / B3 AdminAuth)
 		attributionRoute := apiRouter.Group("/attribution")
 		{
-			attributionRoute.POST("/bind", middleware.RootAuth(), controller.AdminBindAttribution)     // B2 POST /api/attribution/bind 管理员补绑
-			attributionRoute.GET("/changes", middleware.AdminAuth(), controller.GetAttributionChanges) // B3 GET /api/attribution/changes 归属审计查询
-			// B7 管理员查看任意分销商名下客户列表（契约附录 G，plan 6.1 G-1；行形状与 B4 逐字一致）
+			attributionRoute.POST("/bind", middleware.RootAuth(), controller.AdminBindAttribution)     // B2 POST /api/attribution/bind admin re-binding
+			attributionRoute.GET("/changes", middleware.AdminAuth(), controller.GetAttributionChanges) // B3 GET /api/attribution/changes attribution audit query
+			// B7 admin view of customers under any distributor (contract appendix G, plan 6.1 G-1; row shape identical to B4)
 			attributionRoute.GET("/distributor/:id/customers", middleware.AdminAuth(), controller.GetDistributorCustomersForAdmin)
 		}
 
-		// B 域：分销商侧接口（B4/B5/B6，DistributorAuth 精确匹配）
+		// Domain B: distributor-side endpoints (B4/B5/B6, exact DistributorAuth match)
 		distributorRoute := apiRouter.Group("/distributor")
 		distributorRoute.Use(middleware.DistributorAuth())
 		{
-			distributorRoute.GET("/customers", controller.GetDistributorCustomers)            // B4 GET /api/distributor/customers 客户列表
-			distributorRoute.GET("/customers/:id/topups", controller.GetDistributorCustomerTopups) // B5 GET /api/distributor/customers/:id/topups 单客户充值明细
-			distributorRoute.GET("/profile", controller.GetDistributorProfile)                 // B6 GET /api/distributor/profile 分销商自己的资料
+			distributorRoute.GET("/customers", controller.GetDistributorCustomers)                 // B4 GET /api/distributor/customers customer list
+			distributorRoute.GET("/customers/:id/topups", controller.GetDistributorCustomerTopups) // B5 GET /api/distributor/customers/:id/topups per-customer top-up details
+			distributorRoute.GET("/profile", controller.GetDistributorProfile)                     // B6 GET /api/distributor/profile the distributor's own profile
 		}
 
-		// A 域：佣金接口（分销商侧 DistributorAuth + 管理员侧 AdminAuth/RootAuth 共用前缀）
+		// Domain A: commission endpoints (shared prefix with distributor-side DistributorAuth and admin-side AdminAuth/RootAuth)
 		commissionRoute := apiRouter.Group("/commission")
 		{
-			// 分销商侧（A9/A10/A11/A12）——精确匹配 role==5
-			commissionRoute.GET("/dashboard", middleware.DistributorAuth(), controller.GetCommissionDashboard)                      // A9 GET /api/commission/dashboard 佣金仪表盘（§4.3 + 附录 F2 笔数）
-			commissionRoute.GET("/statements/self", middleware.DistributorAuth(), controller.GetSelfCommissionStatements)           // A10 GET /api/commission/statements/self 分销商账单列表（仅本人）
-			commissionRoute.GET("/statements/self/:id/items", middleware.DistributorAuth(), controller.GetSelfCommissionStatementItems) // A11 GET /api/commission/statements/self/:id/items 分销商账单明细（归属校验）
-			commissionRoute.GET("/current", middleware.DistributorAuth(), controller.GetCurrentCommission)                          // A12 GET /api/commission/current 未出账实时预览
+			// Distributor side (A9/A10/A11/A12) -- exact match on role==5
+			commissionRoute.GET("/dashboard", middleware.DistributorAuth(), controller.GetCommissionDashboard)                          // A9 GET /api/commission/dashboard commission dashboard (§4.3 + appendix F2 count)
+			commissionRoute.GET("/statements/self", middleware.DistributorAuth(), controller.GetSelfCommissionStatements)               // A10 GET /api/commission/statements/self distributor statement list (own records only)
+			commissionRoute.GET("/statements/self/:id/items", middleware.DistributorAuth(), controller.GetSelfCommissionStatementItems) // A11 GET /api/commission/statements/self/:id/items distributor statement details (attribution check)
+			commissionRoute.GET("/current", middleware.DistributorAuth(), controller.GetCurrentCommission)                              // A12 GET /api/commission/current real-time preview of unbilled amounts
 
-			// 管理员侧（A1/A2/A3/A4/A5/A6）——阈值 minRole=10
-			commissionRoute.GET("/rates", middleware.AdminAuth(), controller.GetCommissionRates)                             // A1 GET /api/commission/rates 比例列表
-			commissionRoute.PUT("/rates/:distributorId", middleware.AdminAuth(), controller.SetCommissionRate)               // A2 PUT /api/commission/rates/:distributorId 设置比例
-			commissionRoute.GET("/rates/:distributorId/history", middleware.AdminAuth(), controller.GetCommissionRateHistory) // A3 GET /api/commission/rates/:distributorId/history 变更历史
-			commissionRoute.GET("/statements", middleware.AdminAuth(), controller.GetCommissionStatements)                // A4 GET /api/commission/statements 管理员账单列表
-			commissionRoute.GET("/statements/summary", middleware.AdminAuth(), controller.GetCommissionStatementSummary)  // A14 GET /api/commission/statements/summary 跨分销商汇总（契约附录 D3；静态段优先于 :id）
-			commissionRoute.GET("/statements/:id", middleware.AdminAuth(), controller.GetCommissionStatement)             // A5 GET /api/commission/statements/:id 账单详情
-			commissionRoute.GET("/statements/:id/items", middleware.AdminAuth(), controller.GetCommissionStatementItems)  // A6 GET /api/commission/statements/:id/items 账单明细
+			// Admin side (A1/A2/A3/A4/A5/A6) -- threshold minRole=10
+			commissionRoute.GET("/rates", middleware.AdminAuth(), controller.GetCommissionRates)                              // A1 GET /api/commission/rates rate list
+			commissionRoute.PUT("/rates/:distributorId", middleware.AdminAuth(), controller.SetCommissionRate)                // A2 PUT /api/commission/rates/:distributorId set a rate
+			commissionRoute.GET("/rates/:distributorId/history", middleware.AdminAuth(), controller.GetCommissionRateHistory) // A3 GET /api/commission/rates/:distributorId/history change history
+			commissionRoute.GET("/statements", middleware.AdminAuth(), controller.GetCommissionStatements)                    // A4 GET /api/commission/statements admin statement list
+			commissionRoute.GET("/statements/summary", middleware.AdminAuth(), controller.GetCommissionStatementSummary)      // A14 GET /api/commission/statements/summary cross-distributor summary (contract appendix D3; static segment takes precedence over :id)
+			commissionRoute.GET("/statements/:id", middleware.AdminAuth(), controller.GetCommissionStatement)                 // A5 GET /api/commission/statements/:id statement details
+			commissionRoute.GET("/statements/:id/items", middleware.AdminAuth(), controller.GetCommissionStatementItems)      // A6 GET /api/commission/statements/:id/items statement line items
 
-			// 超管侧（A7/A8）——阈值 minRole=100
-			commissionRoute.POST("/flows/manual", middleware.RootAuth(), controller.CreateManualCommissionFlow)              // A7 超管人工补录/冲销流水（契约 §4.3 A7）
-			commissionRoute.POST("/statements/:id/adjustments", middleware.RootAuth(), controller.CreateStatementAdjustment) // A8 超管账单调整单（仅应付状态可开）
+			// Root side (A7/A8) -- threshold minRole=100
+			commissionRoute.POST("/flows/manual", middleware.RootAuth(), controller.CreateManualCommissionFlow)              // A7 root admin manual entry/reversal of commission flows (contract §4.3 A7)
+			commissionRoute.POST("/statements/:id/adjustments", middleware.RootAuth(), controller.CreateStatementAdjustment) // A8 root admin statement adjustment (only allowed in payable status)
 
-			// 提现面（A15-A21，契约附录 E2 冻结；分销商侧 DistributorAuth ×3 + 管理侧 AdminAuth ×4）
-			commissionRoute.POST("/withdrawals", middleware.DistributorAuth(), controller.CreateWithdrawal)         // A15 POST /api/commission/withdrawals 发起提现申请（按单全额 D-08）
-			commissionRoute.GET("/withdrawals/self", middleware.DistributorAuth(), controller.GetSelfWithdrawals)   // A16 GET /api/commission/withdrawals/self 分销商提现单列表（服务端收窄）
-			commissionRoute.GET("/withdrawals", middleware.AdminAuth(), controller.GetWithdrawals)                  // A17 GET /api/commission/withdrawals 管理员提现单列表
-			commissionRoute.POST("/withdrawals/:id/accept", middleware.AdminAuth(), controller.AcceptWithdrawal)    // A18 POST /api/commission/withdrawals/:id/accept 受理（pending→reviewing）
-			commissionRoute.POST("/withdrawals/:id/reject", middleware.AdminAuth(), controller.RejectWithdrawal)    // A19 POST /api/commission/withdrawals/:id/reject 驳回（仅 reviewing，Q2=B）
-			commissionRoute.POST("/withdrawals/:id/approve", middleware.AdminAuth(), controller.ApproveWithdrawal)  // A20 POST /api/commission/withdrawals/:id/approve 批准（reviewing→approved，Q1=B）
-			commissionRoute.POST("/withdrawals/:id/paid", middleware.AdminAuth(), controller.MarkWithdrawalPaid)    // A21 POST /api/commission/withdrawals/:id/paid 打款登记（approved→paid，Q1=B）
+			// Withdrawal surface (A15-A21, frozen per contract appendix E2; distributor side DistributorAuth x3 + admin side AdminAuth x4)
+			commissionRoute.POST("/withdrawals", middleware.DistributorAuth(), controller.CreateWithdrawal)        // A15 POST /api/commission/withdrawals submit a withdrawal request (full amount per statement, D-08)
+			commissionRoute.GET("/withdrawals/self", middleware.DistributorAuth(), controller.GetSelfWithdrawals)  // A16 GET /api/commission/withdrawals/self distributor withdrawal list (narrowed server-side)
+			commissionRoute.GET("/withdrawals", middleware.AdminAuth(), controller.GetWithdrawals)                 // A17 GET /api/commission/withdrawals admin withdrawal list
+			commissionRoute.POST("/withdrawals/:id/accept", middleware.AdminAuth(), controller.AcceptWithdrawal)   // A18 POST /api/commission/withdrawals/:id/accept accept (pending -> reviewing)
+			commissionRoute.POST("/withdrawals/:id/reject", middleware.AdminAuth(), controller.RejectWithdrawal)   // A19 POST /api/commission/withdrawals/:id/reject reject (reviewing only, Q2=B)
+			commissionRoute.POST("/withdrawals/:id/approve", middleware.AdminAuth(), controller.ApproveWithdrawal) // A20 POST /api/commission/withdrawals/:id/approve approve (reviewing -> approved, Q1=B)
+			commissionRoute.POST("/withdrawals/:id/paid", middleware.AdminAuth(), controller.MarkWithdrawalPaid)   // A21 POST /api/commission/withdrawals/:id/paid record payout (approved -> paid, Q1=B)
 		}
 
-		// A13 POST /api/topup/:tradeNo/void 充值单作废（契约附录 C1，RootAuth）
-		// 注意：必须注册在 apiRouter 层级——adminRoute 是 userRoute.Group("/")（前缀 /api/user），
-		// 放入该组会把路径破坏成 /api/user/topup/...，违反契约 C1 冻结路径
+		// A13 POST /api/topup/:tradeNo/void void a top-up order (contract appendix C1, RootAuth)
+		// Note: must be registered at the apiRouter level -- adminRoute is userRoute.Group("/") (prefix /api/user),
+		// Adding it to that group would break the path into /api/user/topup/..., violating the frozen path in contract C1
 		apiRouter.POST("/topup/:tradeNo/void", middleware.RootAuth(), controller.VoidTopUp)
 
 		tokenRoute := apiRouter.Group("/token")

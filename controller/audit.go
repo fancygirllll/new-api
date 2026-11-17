@@ -11,10 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// auditContentTemplates 将稳定的操作标识 action 映射为英文兜底模板，渲染后写入
-// Log.Content（供导出 / 经典前端等非本地化消费者使用）。占位符为 ${name}，由该
-// action 的 params 填充。本地化展示文案在前端 i18n 模板中维护，本表是语言中立的
-// 英文基线——调用方因此无需在每个埋点处手写句子（避免与 params 重复书写同一份值）。
+// auditContentTemplates maps stable action identifiers to English fallback templates that are rendered into
+// Log.Content (for export / classic frontend and other non-localized consumers). Placeholders use ${name} and are filled by the
+// action's params. Localized display text is maintained in the frontend i18n templates; this table is the language-neutral
+// English baseline - callers therefore do not hand-write a sentence at every instrumentation point (avoiding duplicating param values).
 var auditContentTemplates = map[string]string{
 	"user.create":           "Created user ${username} (role ${role})",
 	"user.update":           "Updated user ${username} (ID: ${id})",
@@ -48,7 +48,7 @@ var auditContentTemplates = map[string]string{
 	"redemption.create": "Created ${count} redemption codes named ${name} (${quota} each)",
 }
 
-// auditContentEN 按 action 模板渲染英文兜底文本；未登记的 action 退回 action 本身。
+// auditContentEN renders the English fallback text from the action template; unregistered actions fall back to the action itself.
 func auditContentEN(action string, params map[string]interface{}) string {
 	tmpl, ok := auditContentTemplates[action]
 	if !ok {
@@ -62,7 +62,7 @@ func auditContentEN(action string, params map[string]interface{}) string {
 	})
 }
 
-// auditOperatorInfo 从上下文构建操作者身份信息（管理员 id/用户名/角色）。
+// auditOperatorInfo builds the operator identity from the context (admin id/username/role).
 func auditOperatorInfo(c *gin.Context) map[string]interface{} {
 	return map[string]interface{}{
 		"admin_id":       c.GetInt("id"),
@@ -79,20 +79,20 @@ func auditAuthMethod(c *gin.Context) string {
 	return "session"
 }
 
-// markAuditLogged 标记当前请求已在 handler 内手动记录审计日志，
-// 使鉴权链路中的审计兜底（finishAdminAudit）跳过兜底记录，避免重复。
+// markAuditLogged marks the current request as already audited manually in the handler,
+// so the audit fallback in the auth chain (finishAdminAudit) skips its fallback record and avoids duplicates.
 func markAuditLogged(c *gin.Context) {
 	common.SetContextKey(c, constant.ContextKeyAuditLogged, true)
 }
 
-// recordManageAudit 记录一条由操作者本人归属的管理/高危审计日志（资源类操作：
-// 渠道 / 系统设置 / 兑换码等）。content 由 action+params 自动渲染。
+// recordManageAudit records an admin/high-risk audit log attributed to the operator (resource operations:
+// channels / system settings / redemption codes, etc.). content is rendered automatically from action+params.
 func recordManageAudit(c *gin.Context, action string, params map[string]interface{}) {
 	recordManageAuditFor(c, c.GetInt("id"), action, params)
 }
 
-// recordManageAuditFor 记录一条管理审计日志，日志归属于操作者；targetUserId
-// 只表示被操作用户，用于在结构化参数中保留目标上下文。
+// recordManageAuditFor records an admin audit log attributed to the operator; targetUserId
+// only identifies the affected user and preserves the target context in the structured params.
 func recordManageAuditFor(c *gin.Context, targetUserId int, action string, params map[string]interface{}) {
 	if params == nil {
 		params = map[string]interface{}{}
@@ -105,8 +105,8 @@ func recordManageAuditFor(c *gin.Context, targetUserId int, action string, param
 	markAuditLogged(c)
 }
 
-// recordUserSecurityAudit 记录普通用户自己的安全敏感操作（如 passkey 绑定/解绑）。
-// 这类日志没有管理员操作者，不写 admin_info；同时不依赖 AdminAuth/RootAuth 的兜底。
+// recordUserSecurityAudit records a regular user's own security-sensitive operation (such as passkey bind/unbind).
+// These logs have no admin operator and do not write admin_info; they also do not rely on the AdminAuth/RootAuth fallback.
 func recordUserSecurityAudit(c *gin.Context, userId int, action string, params map[string]interface{}) {
 	model.RecordOperationAuditLog(userId, auditContentEN(action, params), c.ClientIP(), action, params, nil, nil)
 }

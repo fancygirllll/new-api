@@ -27,10 +27,10 @@ import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
 /**
- * 分销商控制台路由（D-01/D-02）。
- * beforeLoad 精确守卫自 index.tsx 逐字平移：非 role=5 一律 /403，
- * 禁阈值式（admin(10) 不是分销商，阈值会让 admin 进页面但 API 全 403 成死入口）。
- * 前端守卫仅体验层，服务端 DistributorAuth（精确 role==5）是真防线。
+ * Distributor console route (D-01/D-02).
+ * The exact beforeLoad guard is moved verbatim from index.tsx: any role != 5 goes to /403,
+ * no threshold-based check (admin(10) is not a distributor; a threshold would admit admin but every API would 403, a dead entry).
+ * The frontend guard is UX-only; server-side DistributorAuth (exact role==5) is the real defense.
  */
 export const Route = createFileRoute('/_authenticated/distributor/$section')({
   beforeLoad: ({ params }) => {

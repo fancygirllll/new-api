@@ -17,10 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * 提现单共享视图组件（D4 禁复制派生，statement-table scope 母本平移）。
- * admin=审核工作台（A17 三过滤 + username 冗余列 + 状态门控操作列 + 查看账单）；
- * self=分销商提现记录（A16 服务端收窄，只读 + 时间线 + 驳回原因/凭证展示，SC5/D-03）。
- * 复用方式：传 scope prop 切换 API 基路径与列收窄，禁止复制本文件派生第二份实现。
+ * Shared withdrawal view component (D4 no copy-paste derivation, moved verbatim from the statement-table scope model).
+ * admin=review workbench (A17 three filters + redundant username column + gated action column + view statement);
+ * self=distributor withdrawal records (A16 server-narrowed, read-only + timeline + rejection reason/voucher display, SC5/D-03).
+ * Reuse pattern: pass the scope prop to switch the API base path and narrow columns; do not copy this file to derive a second implementation.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -52,23 +52,23 @@ import {
 const PAGE_SIZE = 10
 
 interface WithdrawalTableProps {
-  /** admin=审核工作台（A17）；self=分销商本人（A16，隐藏管理列与过滤条/操作列） */
+  /** admin=review workbench (A17); self=the distributor themselves (A16, hides admin columns, filter bar, and action column) */
   scope: WithdrawalScope
-  /** 受理回调（admin，仅 pending 行渲染；API 调用由调用方组装） */
+  /** Accept callback (admin, rendered only on pending rows; the caller assembles the API call) */
   onAccept?: (w: Withdrawal) => void
-  /** 驳回回调（admin，仅 reviewing 行渲染；弹窗由调用方组装） */
+  /** Reject callback (admin, rendered only on reviewing rows; the caller assembles the dialog) */
   onReject?: (w: Withdrawal) => void
-  /** 批准回调（admin，仅 reviewing 行渲染；确认弹窗由调用方组装） */
+  /** Approve callback (admin, rendered only on reviewing rows; the caller assembles the confirmation dialog) */
   onApprove?: (w: Withdrawal) => void
-  /** 打款登记回调（admin，仅 approved 行渲染；voucher 弹窗由调用方组装） */
+  /** Mark-paid callback (admin, rendered only on approved rows; the caller assembles the voucher dialog) */
   onMarkPaid?: (w: Withdrawal) => void
-  /** 查看账单回调（admin 全状态行渲染；调用方组装 StatementDetail(scope=admin) 快照明细，WDRAW-03） */
+  /** View-statement callback (admin, rendered on rows in all states; the caller assembles StatementDetail(scope=admin) statement detail, WDRAW-03) */
   onOpenStatement?: (w: Withdrawal) => void
-  /** 变更时重取列表（申请/受理/驳回/批准/打款成功后由调用方 ++） */
+  /** Refetch the list on change (the caller bumps this after apply/accept/reject/approve/mark-paid) */
   refreshKey?: number
 }
 
-/** 提现单状态徽标（标签走常量映射，不透传服务端字符串 T-05-02-02） */
+/** Withdrawal status badge (labels come from the constant mapping, never pass through server strings, T-05-02-02) */
 function WithdrawalStatusBadge({ status }: { status: WithdrawalStatus }) {
   const { t } = useTranslation()
   return (
@@ -78,7 +78,7 @@ function WithdrawalStatusBadge({ status }: { status: WithdrawalStatus }) {
   )
 }
 
-/** 时间线单元格（时间线五列，空值 0 不展示） */
+/** Timeline cell (five timeline columns; a value of 0 is not displayed) */
 function TimelineCell({ w }: { w: Withdrawal }) {
   const { t } = useTranslation()
   const marks = WITHDRAWAL_TIMELINE_FIELDS.filter((f) => (w[f.key] as number) > 0)
@@ -95,8 +95,8 @@ function TimelineCell({ w }: { w: Withdrawal }) {
 }
 
 /**
- * 提现单列表（A16/A17）：admin distributor_id/status 过滤 + 分页 + 状态门控操作列；
- * self 只读（时间线 + 驳回原因 + 凭证号，SC5/D-03）。
+ * Withdrawal list (A16/A17): admin distributor_id/status filters + pagination + state-gated action column;
+ * self is read-only (timeline + rejection reason + voucher number, SC5/D-03).
  */
 export function WithdrawalTable({
   scope,
@@ -144,7 +144,7 @@ export function WithdrawalTable({
 
   return (
     <div className='flex flex-col gap-4'>
-      {/* 过滤条：self 场景服务端已收窄数据，隐藏过滤（列收窄由 scope 驱动） */}
+      {/* Filter bar: in the self case the server already narrowed the data, so hide the filters (column narrowing is driven by scope) */}
       {scope === 'admin' && (
         <div className='flex flex-wrap items-center gap-2'>
           <Input

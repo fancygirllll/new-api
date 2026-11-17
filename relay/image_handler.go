@@ -104,7 +104,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 				httpResp.StatusCode = http.StatusOK
 			} else {
 				newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
-				// reset status code 重置状态码
+				// reset status code
 				service.ResetStatusCode(newAPIError, statusCodeMappingStr)
 				return newAPIError
 			}
@@ -113,7 +113,7 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 
 	usage, newAPIError := adaptor.DoResponse(c, httpResp, info)
 	if newAPIError != nil {
-		// reset status code 重置状态码
+		// reset status code
 		service.ResetStatusCode(newAPIError, statusCodeMappingStr)
 		return newAPIError
 	}
@@ -148,13 +148,13 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	var logContent []string
 
 	if len(request.Size) > 0 {
-		logContent = append(logContent, fmt.Sprintf("大小 %s", request.Size))
+		logContent = append(logContent, fmt.Sprintf("Size %s", request.Size))
 	}
 	if len(quality) > 0 {
-		logContent = append(logContent, fmt.Sprintf("品质 %s", quality))
+		logContent = append(logContent, fmt.Sprintf("Quality %s", quality))
 	}
 	if imageN > 0 {
-		logContent = append(logContent, fmt.Sprintf("生成数量 %d", imageN))
+		logContent = append(logContent, fmt.Sprintf("Count %d", imageN))
 	}
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), logContent)

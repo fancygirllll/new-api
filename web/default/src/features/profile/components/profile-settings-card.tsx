@@ -53,7 +53,7 @@ export function ProfileSettingsCard({
   const [activeTab, setActiveTab] = useState('bindings')
   const [rebindOpen, rebindHandlers] = useDialog()
 
-  // 归属状态（契约 §4.1 M2）：仅 InviterId=0 且 rebind_available=true 时显示补绑入口
+  // Attribution state (contract §4.1 M2): show the rebind entry only when InviterId=0 and rebind_available=true
   const attribution = profile?.attribution
   const inviterId = attribution?.inviter_id ?? 0
   const rebindAvailable = attribution?.rebind_available === true
@@ -118,8 +118,8 @@ export function ProfileSettingsCard({
         </TabsList>
 
         <TabsContent value='bindings' className='mt-4 space-y-4 sm:mt-6'>
-          {/* 归属绑定区块（业务关系，与 OAuth 登录绑定视觉区分）：
-              仅服务端返回 attribution 字段时渲染（后端未部署/旧版本时优雅降级） */}
+          {/* Attribution binding block (a business relationship, visually distinct from OAuth login bindings):
+              rendered only when the server returns the attribution field (graceful degradation when the backend is not deployed / older) */}
           {attribution && (
             <div className='flex items-center justify-between gap-2.5 rounded-lg border p-2.5 sm:gap-3 sm:p-3'>
               <div className='flex min-w-0 items-center gap-2.5 sm:gap-3'>

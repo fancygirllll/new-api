@@ -123,7 +123,7 @@ func UpdateOption(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": "无效的参数",
+			"message": "Invalid parameter",
 		})
 		return
 	}
@@ -145,7 +145,7 @@ func UpdateOption(c *gin.Context) {
 		}
 	default:
 		if isPaymentComplianceOptionKey(option.Key) {
-			common.ApiErrorMsg(c, "合规确认字段不允许通过通用设置接口修改")
+			common.ApiErrorMsg(c, "Compliance confirmation fields cannot be modified through the general settings endpoint")
 			return
 		}
 	}
@@ -154,7 +154,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && common.GitHubClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用 GitHub OAuth，请先填入 GitHub Client Id 以及 GitHub Client Secret！",
+				"message": "Cannot enable GitHub OAuth. Enter the GitHub Client Id and GitHub Client Secret first!",
 			})
 			return
 		}
@@ -162,7 +162,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && system_setting.GetDiscordSettings().ClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用 Discord OAuth，请先填入 Discord Client Id 以及 Discord Client Secret！",
+				"message": "Cannot enable Discord OAuth. Enter the Discord Client Id and Discord Client Secret first!",
 			})
 			return
 		}
@@ -170,7 +170,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && system_setting.GetOIDCSettings().ClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用 OIDC 登录，请先填入 OIDC Client Id 以及 OIDC Client Secret！",
+				"message": "Cannot enable OIDC login. Enter the OIDC Client Id and OIDC Client Secret first!",
 			})
 			return
 		}
@@ -178,7 +178,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && common.LinuxDOClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用 LinuxDO OAuth，请先填入 LinuxDO Client Id 以及 LinuxDO Client Secret！",
+				"message": "Cannot enable LinuxDO OAuth. Enter the LinuxDO Client Id and LinuxDO Client Secret first!",
 			})
 			return
 		}
@@ -186,7 +186,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && len(common.EmailDomainWhitelist) == 0 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用邮箱域名限制，请先填入限制的邮箱域名！",
+				"message": "Cannot enable the email domain restriction. Enter the restricted email domains first!",
 			})
 			return
 		}
@@ -194,7 +194,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && common.WeChatServerAddress == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用微信登录，请先填入微信登录相关配置信息！",
+				"message": "Cannot enable WeChat login. Enter the WeChat login configuration first!",
 			})
 			return
 		}
@@ -202,7 +202,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && common.TurnstileSiteKey == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用 Turnstile 校验，请先填入 Turnstile 校验相关配置信息！",
+				"message": "Cannot enable Turnstile verification. Enter the Turnstile configuration first!",
 			})
 
 			return
@@ -211,7 +211,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value == "true" && common.TelegramBotToken == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法启用 Telegram OAuth，请先填入 Telegram Bot Token！",
+				"message": "Cannot enable Telegram OAuth. Enter the Telegram Bot Token first!",
 			})
 			return
 		}
@@ -219,7 +219,7 @@ func UpdateOption(c *gin.Context) {
 		if option.Value != "default" && option.Value != "classic" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无效的主题值，可选值：default（新版前端）、classic（经典前端）",
+				"message": "Invalid theme value. Valid values: default (new frontend), classic (classic frontend)",
 			})
 			return
 		}
@@ -237,7 +237,7 @@ func UpdateOption(c *gin.Context) {
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "图片倍率设置失败: " + err.Error(),
+				"message": "Failed to set image ratio: " + err.Error(),
 			})
 			return
 		}
@@ -246,7 +246,7 @@ func UpdateOption(c *gin.Context) {
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "音频倍率设置失败: " + err.Error(),
+				"message": "Failed to set audio ratio: " + err.Error(),
 			})
 			return
 		}
@@ -255,7 +255,7 @@ func UpdateOption(c *gin.Context) {
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "音频补全倍率设置失败: " + err.Error(),
+				"message": "Failed to set audio completion ratio: " + err.Error(),
 			})
 			return
 		}
@@ -264,7 +264,7 @@ func UpdateOption(c *gin.Context) {
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "缓存创建倍率设置失败: " + err.Error(),
+				"message": "Failed to set cache creation ratio: " + err.Error(),
 			})
 			return
 		}
@@ -331,8 +331,8 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
-	// Phase 2 分销商佣金与归属设置键值域校验（契约 §2.4 + §3.4）。
-	// 非法值返回 400，防止运行时全局变量被写入越界值导致窗口计算/出账日逻辑异常。
+	// Phase 2 distributor commission and attribution settings value-range validation (contract §2.4 + §3.4).
+	// Invalid values return 400, preventing out-of-range runtime globals from breaking window calculations or billing-day logic.
 	case "CommissionPayoutDay":
 		payoutDay, parseErr := strconv.Atoi(option.Value.(string))
 		if parseErr != nil || payoutDay < 8 || payoutDay > 31 {
@@ -366,7 +366,7 @@ func UpdateOption(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	// 出于安全考虑只记录被修改的配置项名称，不记录配置值（可能含密钥等敏感信息）。
+	// For security, record only the names of modified settings, never their values (which may contain keys or other sensitive data).
 	recordManageAudit(c, "option.update", map[string]interface{}{
 		"key": option.Key,
 	})

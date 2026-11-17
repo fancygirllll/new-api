@@ -98,7 +98,7 @@ const SectionDivider = ({ label }: { label: string }) => (
 
 export function ModelsFilter(props: ModelsFilterProps) {
   const { t } = useTranslation()
-  // 使用已缓存的用户数据，避免重复调用 API
+  // Use the cached user data to avoid duplicate API calls
   const user = useAuthStore((state) => state.auth.user)
   const isAdmin = user?.role && user.role >= 10
 

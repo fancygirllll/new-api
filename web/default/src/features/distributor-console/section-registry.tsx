@@ -19,8 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { createSectionRegistry } from '@/features/system-settings/utils/section-registry'
 
 /**
- * 分销商控制台 section 定义（D-01：四节 overview/customers/statements/withdrawals）。
- * 内容由 feature index.tsx 渲染（节内状态/弹窗需组件内持有），build 恒空。
+ * Distributor console section definitions (D-01: four sections overview/customers/statements/withdrawals).
+ * Content is rendered by the feature index.tsx (section state/dialogs must stay in the component); build is always empty.
  */
 export const DISTRIBUTOR_SECTIONS = [
   {

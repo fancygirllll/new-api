@@ -17,10 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 /**
- * 对账单共享视图组件（契约附录 D4）
- * Phase 4：管理端只读入口（scope="admin" → /api/commission/statements*，全分销商视角）
- * Phase 6：分销商控制台复用（scope="self" → /api/commission/statements/self*，DistributorAuth 数据收窄）
- * 复用方式：传 scope prop 切换 API 基路径与列收窄，禁止复制本文件派生第二份实现
+ * Shared statement view component (contract appendix D4)
+ * Phase 4: admin read-only entry (scope="admin" → /api/commission/statements*, all-distributor view)
+ * Phase 6: reused by the distributor console (scope="self" → /api/commission/statements/self*, DistributorAuth narrows the data)
+ * Reuse pattern: pass the scope prop to switch the API base path and narrow columns; do not copy this file to derive a second implementation
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -47,23 +47,23 @@ import {
 const PAGE_SIZE = 10
 
 interface StatementTableProps {
-  /** admin=全分销商视角（A4 三过滤）；self=分销商本人（A10，Phase 6 复用，隐藏分销商列与过滤条） */
+  /** admin=all-distributor view (A4 three filters); self=the distributor themselves (A10, Phase 6 reuse, hides the distributor column and filter bar) */
   scope: StatementScope
-  /** 固定分销商过滤（self 场景由服务端收窄，无需传） */
+  /** Fixed distributor filter (the self case is narrowed server-side, so no need to pass it) */
   distributorId?: number
-  /** 行点击回调（管理端打开详情；Phase 6 self 场景同样可挂明细跳转） */
+  /** Row click callback (admin opens details; Phase 6 self can also wire item navigation) */
   onOpenDetail?: (statement: CommissionStatement) => void
-  /** Phase 5 additive：self 视角 payable 行「申请提现」回调（三条件齐备才渲染，undefined 时 admin 零影响，D4 禁复制派生） */
+  /** Phase 5 additive: 'apply for withdrawal' callback on payable rows in the self view (rendered only when all three conditions hold; undefined has zero impact on admin, D4 no copy-paste derivation) */
   onApplyWithdraw?: (statement: CommissionStatement) => void
-  /** 6.2 additive：admin 视角 payable 行「调整」回调（A8 RootAuth；undefined 时零影响） */
+  /** 6.2 additive: 'adjust' callback on payable rows in the admin view (A8 RootAuth; undefined has zero impact) */
   onAdjust?: (statement: CommissionStatement) => void
-  /** Phase 5 additive：变更时重取列表（申请/驳回回退/打款结清后账单状态联动刷新，D-05） */
+  /** Phase 5 additive: refetch the list on change (statement status refreshes after apply/reject-rollback/settle, D-05) */
   refreshKey?: number
 }
 
 /**
- * 对账单列表（A4/A10）：period/distributor_id/status 过滤条 + 分页表格。
- * 最小只读：无导出（契约 D4 范围纪律）；Phase 5 additive 行内「申请提现」入口。
+ * Statement list (A4/A10): period/distributor_id/status filter bar + paginated table.
+ * Minimal read-only: no export (contract D4 scope discipline); Phase 5 additive inline 'apply for withdrawal' entry.
  */
 export function StatementTable({
   scope,
@@ -112,7 +112,7 @@ export function StatementTable({
 
   return (
     <div className='flex flex-col gap-4'>
-      {/* 过滤条：self 场景服务端已收窄数据，隐藏分销商/期过滤（列收窄由 scope 驱动） */}
+      {/* Filter bar: in the self case the server already narrowed the data, so hide the distributor/period filters (column narrowing is driven by scope) */}
       {scope === 'admin' && (
         <div className='flex flex-wrap items-center gap-2'>
           <Input
@@ -199,7 +199,7 @@ export function StatementTable({
                         {t('Detail')}
                       </Button>
                     )}
-                    {/* Phase 5 additive：self + payable + 回调齐备才出「申请提现」（undefined 时行为与现状一致） */}
+                    {/* Phase 5 additive: 'apply for withdrawal' only when self + payable + callback are all present (behavior is unchanged when undefined) */}
                     {scope === 'self' &&
                       row.status === 'payable' &&
                       onApplyWithdraw && (
@@ -211,7 +211,7 @@ export function StatementTable({
                           {t('Apply Withdrawal')}
                         </Button>
                       )}
-                    {/* 6.2 additive：admin + payable + 回调齐备才出「调整」（A8 RootAuth，仅 root 查看者由组装点传回调） */}
+                    {/* 6.2 additive: 'adjust' only when admin + payable + callback are all present (A8 RootAuth; the callback is passed only by the assembly point for root viewers) */}
                     {scope === 'admin' &&
                       row.status === 'payable' &&
                       onAdjust && (

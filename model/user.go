@@ -43,8 +43,8 @@ type User struct {
 	Group            string                     `json:"group" gorm:"type:varchar(64);default:'default'"`
 	AffCode          string                     `json:"aff_code" gorm:"type:varchar(32);column:aff_code;uniqueIndex"`
 	AffCount         int                        `json:"aff_count" gorm:"type:int;default:0;column:aff_count"`
-	AffQuota         int                        `json:"aff_quota" gorm:"type:int;default:0;column:aff_quota"`           // 邀请剩余额度
-	AffHistoryQuota  int                        `json:"aff_history_quota" gorm:"type:int;default:0;column:aff_history"` // 邀请历史额度
+	AffQuota         int                        `json:"aff_quota" gorm:"type:int;default:0;column:aff_quota"`           // Remaining invitation quota
+	AffHistoryQuota  int                        `json:"aff_history_quota" gorm:"type:int;default:0;column:aff_history"` // Historical invitation quota
 	InviterId        int                        `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
 	DeletedAt        gorm.DeletedAt             `gorm:"index"`
 	LinuxDOId        string                     `json:"linux_do_id" gorm:"column:linux_do_id;index"`
@@ -100,18 +100,18 @@ func (user *User) SetSetting(setting dto.UserSetting) {
 	user.Setting = string(settingBytes)
 }
 
-// 根据用户角色生成默认的边栏配置
+// Generate the default sidebar config based on the user role
 func generateDefaultSidebarConfigForRole(userRole int) string {
 	defaultConfig := map[string]interface{}{}
 
-	// 聊天区域 - 所有用户都可以访问
+	// Chat area - accessible to all users
 	defaultConfig["chat"] = map[string]interface{}{
 		"enabled":    true,
 		"playground": true,
 		"chat":       true,
 	}
 
-	// 控制台区域 - 所有用户都可以访问
+	// Console area - accessible to all users
 	defaultConfig["console"] = map[string]interface{}{
 		"enabled":    true,
 		"detail":     true,
@@ -121,26 +121,26 @@ func generateDefaultSidebarConfigForRole(userRole int) string {
 		"task":       true,
 	}
 
-	// 个人中心区域 - 所有用户都可以访问
+	// Personal center area - accessible to all users
 	defaultConfig["personal"] = map[string]interface{}{
 		"enabled":  true,
 		"topup":    true,
 		"personal": true,
 	}
 
-	// 管理员区域 - 根据角色决定
+	// Admin area - depends on the role
 	if userRole == common.RoleAdminUser {
-		// 管理员可以访问管理员区域，但不能访问系统设置
+		// Admins can access the admin area but not system settings
 		defaultConfig["admin"] = map[string]interface{}{
 			"enabled":    true,
 			"channel":    true,
 			"models":     true,
 			"redemption": true,
 			"user":       true,
-			"setting":    false, // 管理员不能访问系统设置
+			"setting":    false, // Admins cannot access system settings
 		}
 	} else if userRole == common.RoleRootUser {
-		// 超级管理员可以访问所有功能
+		// Root admins can access all features
 		defaultConfig["admin"] = map[string]interface{}{
 			"enabled":    true,
 			"channel":    true,
@@ -150,12 +150,12 @@ func generateDefaultSidebarConfigForRole(userRole int) string {
 			"setting":    true,
 		}
 	}
-	// 普通用户不包含admin区域
+	// Regular users do not include the admin area
 
-	// 转换为JSON字符串
+	// Convert to a JSON string
 	configBytes, err := json.Marshal(defaultConfig)
 	if err != nil {
-		common.SysLog("生成默认边栏配置失败: " + err.Error())
+		common.SysLog("Failed to generate default sidebar config: " + err.Error())
 		return ""
 	}
 
@@ -231,7 +231,7 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 	var total int64
 	var err error
 
-	// 开始事务
+	// Begin the transaction
 	tx := DB.Begin()
 	if tx.Error != nil {
 		return nil, 0, tx.Error
@@ -242,17 +242,17 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 		}
 	}()
 
-	// 构建基础查询
+	// Build the base query
 	query := tx.Unscoped().Model(&User{})
 
-	// 构建搜索条件
+	// Build search conditions
 	likeCondition := "username LIKE ? OR email LIKE ? OR display_name LIKE ?"
 	likeArgs := []interface{}{"%" + keyword + "%", "%" + keyword + "%", "%" + keyword + "%"}
 
-	// 尝试将关键字转换为整数ID
+	// Try converting the keyword to an integer ID
 	keywordInt, err := strconv.Atoi(keyword)
 	if err == nil {
-		// 如果是数字，同时搜索ID和其他字段
+		// If numeric, search both the ID and other fields
 		likeCondition = "id = ? OR " + likeCondition
 		likeArgs = append([]interface{}{keywordInt}, likeArgs...)
 	}
@@ -272,21 +272,21 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 		}
 	}
 
-	// 获取总数
+	// Get the total count
 	err = query.Count(&total).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
 	}
 
-	// 获取分页数据
+	// Get the paginated data
 	err = query.Omit("password").Order("id desc").Limit(num).Offset(startIdx).Find(&users).Error
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, err
 	}
 
-	// 提交事务
+	// Commit the transaction
 	if err = tx.Commit().Error; err != nil {
 		return nil, 0, err
 	}
@@ -296,7 +296,7 @@ func SearchUsers(keyword string, group string, role *int, status *int, startIdx 
 
 func GetUserById(id int, selectAll bool) (*User, error) {
 	if id == 0 {
-		return nil, errors.New("id 为空！")
+		return nil, errors.New("id is empty!")
 	}
 	user := User{Id: id}
 	var err error = nil
@@ -310,7 +310,7 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 
 func GetUserIdByAffCode(affCode string) (int, error) {
 	if affCode == "" {
-		return 0, errors.New("affCode 为空！")
+		return 0, errors.New("affCode is empty!")
 	}
 	var user User
 	err := DB.Select("id").First(&user, "aff_code = ?", affCode).Error
@@ -319,7 +319,7 @@ func GetUserIdByAffCode(affCode string) (int, error) {
 
 func DeleteUserById(id int) (err error) {
 	if id == 0 {
-		return errors.New("id 为空！")
+		return errors.New("id is empty!")
 	}
 	user := User{Id: id}
 	return user.Delete()
@@ -327,7 +327,7 @@ func DeleteUserById(id int) (err error) {
 
 func HardDeleteUserById(id int) error {
 	if id == 0 {
-		return errors.New("id 为空！")
+		return errors.New("id is empty!")
 	}
 	return DB.Transaction(func(tx *gorm.DB) error {
 		if err := deleteUserOAuthBindingsByUserId(tx, id); err != nil {
@@ -349,39 +349,39 @@ func inviteUser(inviterId int) (err error) {
 }
 
 func (user *User) TransferAffQuotaToQuota(quota int) error {
-	// 检查quota是否小于最小额度
+	// Check whether quota is below the minimum amount
 	if float64(quota) < common.QuotaPerUnit {
-		return fmt.Errorf("转移额度最小为%s！", logger.LogQuota(int(common.QuotaPerUnit)))
+		return fmt.Errorf("Minimum transfer amount is %s!", logger.LogQuota(int(common.QuotaPerUnit)))
 	}
 
-	// 开始数据库事务
+	// Begin the database transaction
 	tx := DB.Begin()
 	if tx.Error != nil {
 		return tx.Error
 	}
-	defer tx.Rollback() // 确保在函数退出时事务能回滚
+	defer tx.Rollback() // Ensure the transaction rolls back when the function exits
 
-	// 加锁查询用户以确保数据一致性
+	// Query the user with a lock to ensure consistency
 	err := tx.Set("gorm:query_option", "FOR UPDATE").First(&user, user.Id).Error
 	if err != nil {
 		return err
 	}
 
-	// 再次检查用户的AffQuota是否足够
+	// Re-check whether the user's AffQuota is sufficient
 	if user.AffQuota < quota {
-		return errors.New("邀请额度不足！")
+		return errors.New("Insufficient invitation quota!")
 	}
 
-	// 更新用户额度
+	// Update the user quota
 	user.AffQuota -= quota
 	user.Quota += quota
 
-	// 保存用户状态
+	// Save the user state
 	if err := tx.Save(user).Error; err != nil {
 		return err
 	}
 
-	// 提交事务
+	// Commit the transaction
 	return tx.Commit().Error
 }
 
@@ -397,10 +397,10 @@ func (user *User) Insert(inviterId int) error {
 	//user.SetAccessToken(common.GetUUID())
 	user.AffCode = common.GetRandomString(4)
 
-	// 初始化用户设置，包括默认的边栏配置
+	// Initialize user settings, including the default sidebar config
 	if user.Setting == "" {
 		defaultSetting := dto.UserSetting{}
-		// 这里暂时不设置SidebarModules，因为需要在用户创建后根据角色设置
+		// SidebarModules is not set here because it depends on the role and must be set after the user is created
 		user.SetSetting(defaultSetting)
 	}
 
@@ -414,32 +414,32 @@ func (user *User) Insert(inviterId int) error {
 }
 
 func (user *User) finishInsert(inviterId int) {
-	// 用户创建成功后，根据角色初始化边栏配置
-	// 需要重新获取用户以确保有正确的ID和Role
+	// After the user is created, initialize the sidebar config based on the role
+	// Re-fetch the user to ensure the correct ID and Role
 	var createdUser User
 	if err := DB.Where("username = ?", user.Username).First(&createdUser).Error; err == nil {
-		// 生成基于角色的默认边栏配置
+		// Generate the role-based default sidebar config
 		defaultSidebarConfig := generateDefaultSidebarConfigForRole(createdUser.Role)
 		if defaultSidebarConfig != "" {
 			currentSetting := createdUser.GetSetting()
 			currentSetting.SidebarModules = defaultSidebarConfig
 			createdUser.SetSetting(currentSetting)
 			createdUser.Update(false)
-			common.SysLog(fmt.Sprintf("为新用户 %s (角色: %d) 初始化边栏配置", createdUser.Username, createdUser.Role))
+			common.SysLog(fmt.Sprintf("Initializing sidebar config for new user %s (role: %d)", createdUser.Username, createdUser.Role))
 		}
 	}
 
 	if common.QuotaForNewUser > 0 {
-		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", logger.LogQuota(common.QuotaForNewUser)))
+		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("New user registration bonus %s", logger.LogQuota(common.QuotaForNewUser)))
 	}
 	if inviterId != 0 && operation_setting.IsPaymentComplianceConfirmed() {
 		if common.QuotaForInvitee > 0 {
 			_ = IncreaseUserQuota(user.Id, common.QuotaForInvitee, true)
-			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("使用邀请码赠送 %s", logger.LogQuota(common.QuotaForInvitee)))
+			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("Invitation code bonus %s", logger.LogQuota(common.QuotaForInvitee)))
 		}
 		if common.QuotaForInviter > 0 {
 			//_ = IncreaseUserQuota(inviterId, common.QuotaForInviter)
-			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
+			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("Inviter bonus %s", logger.LogQuota(common.QuotaForInviter)))
 			_ = inviteUser(inviterId)
 		}
 	}
@@ -463,7 +463,7 @@ func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 	user.Quota = common.QuotaForNewUser
 	user.AffCode = common.GetRandomString(4)
 
-	// 初始化用户设置
+	// Initialize user settings
 	if user.Setting == "" {
 		defaultSetting := dto.UserSetting{}
 		user.SetSetting(defaultSetting)
@@ -480,7 +480,7 @@ func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 // FinalizeOAuthUserCreation performs post-transaction tasks for OAuth user creation.
 // This should be called after the transaction commits successfully.
 func (user *User) FinalizeOAuthUserCreation(inviterId int) {
-	// 用户创建成功后，根据角色初始化边栏配置
+	// After the user is created, initialize the sidebar config based on the role
 	var createdUser User
 	if err := DB.Where("id = ?", user.Id).First(&createdUser).Error; err == nil {
 		defaultSidebarConfig := generateDefaultSidebarConfigForRole(createdUser.Role)
@@ -489,20 +489,20 @@ func (user *User) FinalizeOAuthUserCreation(inviterId int) {
 			currentSetting.SidebarModules = defaultSidebarConfig
 			createdUser.SetSetting(currentSetting)
 			createdUser.Update(false)
-			common.SysLog(fmt.Sprintf("为新用户 %s (角色: %d) 初始化边栏配置", createdUser.Username, createdUser.Role))
+			common.SysLog(fmt.Sprintf("Initializing sidebar config for new user %s (role: %d)", createdUser.Username, createdUser.Role))
 		}
 	}
 
 	if common.QuotaForNewUser > 0 {
-		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", logger.LogQuota(common.QuotaForNewUser)))
+		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("New user registration bonus %s", logger.LogQuota(common.QuotaForNewUser)))
 	}
 	if inviterId != 0 && operation_setting.IsPaymentComplianceConfirmed() {
 		if common.QuotaForInvitee > 0 {
 			_ = IncreaseUserQuota(user.Id, common.QuotaForInvitee, true)
-			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("使用邀请码赠送 %s", logger.LogQuota(common.QuotaForInvitee)))
+			RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("Invitation code bonus %s", logger.LogQuota(common.QuotaForInvitee)))
 		}
 		if common.QuotaForInviter > 0 {
-			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
+			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("Inviter bonus %s", logger.LogQuota(common.QuotaForInviter)))
 			_ = inviteUser(inviterId)
 		}
 	}
@@ -557,10 +557,10 @@ func (user *User) EditWithTx(tx *gorm.DB, updatePassword bool) error {
 	if updatePassword {
 		updates["password"] = newUser.Password
 	}
-	// M1（契约 §4.1）：role 变更时加入 updates 白名单。
-	// `!= 0` 守卫是安全关键——UpdateSelf 等调用方构造 cleanUser 时不含 Role（Go 零值 0），
-	// 若无条件加入会把 role 误写为 0（Guest）。UpdateUser 在调用前已将 0 占位回写为 originRole，
-	// 故此处只需判非零即正确覆盖 role 变更与无变更（同值 no-op）两种场景（Pitfall 3）。
+	// M1 (contract §4.1): add role to the updates whitelist when it changes.
+	// The `!= 0` guard is security-critical: callers such as UpdateSelf build cleanUser without Role (Go zero value 0),
+	// and adding it unconditionally would write role as 0 (Guest). UpdateUser already restores the 0 placeholder to originRole before calling,
+	// so checking for non-zero here correctly covers both a role change and no change (same-value no-op) (Pitfall 3).
 	if newUser.Role != 0 {
 		updates["role"] = newUser.Role
 	}
@@ -605,19 +605,19 @@ func (user *User) ClearBinding(bindingType string) error {
 
 func (user *User) Delete() error {
 	if user.Id == 0 {
-		return errors.New("id 为空！")
+		return errors.New("id is empty!")
 	}
 	if err := DB.Delete(user).Error; err != nil {
 		return err
 	}
 
-	// 清除缓存
+	// Clear the cache
 	return invalidateUserCache(user.Id)
 }
 
 func (user *User) HardDelete() error {
 	if user.Id == 0 {
-		return errors.New("id 为空！")
+		return errors.New("id is empty!")
 	}
 	return DB.Transaction(func(tx *gorm.DB) error {
 		if err := deleteUserOAuthBindingsByUserId(tx, user.Id); err != nil {
@@ -654,7 +654,7 @@ func (user *User) ValidateAndFill() (err error) {
 
 func (user *User) FillUserById() error {
 	if user.Id == 0 {
-		return errors.New("id 为空！")
+		return errors.New("id is empty!")
 	}
 	DB.Where(User{Id: user.Id}).First(user)
 	return nil
@@ -662,7 +662,7 @@ func (user *User) FillUserById() error {
 
 func (user *User) FillUserByEmail() error {
 	if user.Email == "" {
-		return errors.New("email 为空！")
+		return errors.New("email is empty!")
 	}
 	DB.Where(User{Email: user.Email}).First(user)
 	return nil
@@ -670,7 +670,7 @@ func (user *User) FillUserByEmail() error {
 
 func (user *User) FillUserByGitHubId() error {
 	if user.GitHubId == "" {
-		return errors.New("GitHub id 为空！")
+		return errors.New("GitHub id is empty!")
 	}
 	DB.Where(User{GitHubId: user.GitHubId}).First(user)
 	return nil
@@ -686,7 +686,7 @@ func (user *User) UpdateGitHubId(newGitHubId string) error {
 
 func (user *User) FillUserByDiscordId() error {
 	if user.DiscordId == "" {
-		return errors.New("discord id 为空！")
+		return errors.New("discord id is empty!")
 	}
 	DB.Where(User{DiscordId: user.DiscordId}).First(user)
 	return nil
@@ -694,7 +694,7 @@ func (user *User) FillUserByDiscordId() error {
 
 func (user *User) FillUserByOidcId() error {
 	if user.OidcId == "" {
-		return errors.New("oidc id 为空！")
+		return errors.New("oidc id is empty!")
 	}
 	DB.Where(User{OidcId: user.OidcId}).First(user)
 	return nil
@@ -702,7 +702,7 @@ func (user *User) FillUserByOidcId() error {
 
 func (user *User) FillUserByWeChatId() error {
 	if user.WeChatId == "" {
-		return errors.New("WeChat id 为空！")
+		return errors.New("WeChat id is empty!")
 	}
 	DB.Where(User{WeChatId: user.WeChatId}).First(user)
 	return nil
@@ -710,11 +710,11 @@ func (user *User) FillUserByWeChatId() error {
 
 func (user *User) FillUserByTelegramId() error {
 	if user.TelegramId == "" {
-		return errors.New("Telegram id 为空！")
+		return errors.New("Telegram id is empty!")
 	}
 	err := DB.Where(User{TelegramId: user.TelegramId}).First(user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return errors.New("该 Telegram 账户未绑定")
+		return errors.New("This Telegram account is not linked")
 	}
 	return nil
 }
@@ -745,7 +745,7 @@ func IsTelegramIdAlreadyTaken(telegramId string) bool {
 
 func ResetUserPasswordByEmail(email string, password string) error {
 	if email == "" || password == "" {
-		return errors.New("邮箱地址或密码为空！")
+		return errors.New("Email or password is empty!")
 	}
 	hashedPassword, err := common.Password2Hash(password)
 	if err != nil {
@@ -920,7 +920,7 @@ func GetUserSetting(id int, fromDB bool) (settingMap dto.UserSetting, err error)
 
 func IncreaseUserQuota(id int, quota int, db bool) (err error) {
 	if quota < 0 {
-		return errors.New("quota 不能为负数！")
+		return errors.New("quota cannot be negative!")
 	}
 	gopool.Go(func() {
 		err := cacheIncrUserQuota(id, int64(quota))
@@ -945,7 +945,7 @@ func increaseUserQuota(id int, quota int) (err error) {
 
 func DecreaseUserQuota(id int, quota int, db bool) (err error) {
 	if quota < 0 {
-		return errors.New("quota 不能为负数！")
+		return errors.New("quota cannot be negative!")
 	}
 	gopool.Go(func() {
 		err := cacheDecrUserQuota(id, int64(quota))
@@ -1016,7 +1016,7 @@ func updateUserUsedQuotaAndRequestCount(id int, quota int, count int) {
 		return
 	}
 
-	//// 更新缓存
+	//// Update the cache
 	//if err := invalidateUserCache(id); err != nil {
 	//	common.SysError("failed to invalidate user cache: " + err.Error())
 	//}

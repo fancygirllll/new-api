@@ -49,7 +49,7 @@ func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayIn
 			for i2, mediaMessage := range content {
 				if mediaMessage.Source != nil {
 					if mediaMessage.Source.Type == "url" {
-						// 使用统一的文件服务获取图片数据
+						// Fetch the image data through the unified file service.
 						source := types.NewURLFileSource(mediaMessage.Source.Url)
 						base64Data, mimeType, err := service.GetBase64Data(c, source, "formatting image for Claude")
 						if err != nil {
@@ -115,14 +115,14 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
-	// 检查是否为Nova模型
+	// Check whether this is a Nova model.
 	if isNovaModel(request.Model) {
 		novaReq := convertToNovaRequest(request)
 		a.IsNova = true
 		return novaReq, nil
 	}
 
-	// 原有的Claude模型处理逻辑
+	// Existing Claude model handling logic.
 	claudeReq, err := claude.RequestOpenAI2ClaudeMessage(c, *request)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert openai request to claude request")

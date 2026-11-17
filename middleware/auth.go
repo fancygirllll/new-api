@@ -107,8 +107,9 @@ func authenticateUser(c *gin.Context, minRole int) {
 			return
 		}
 	}
-	// 会话生命周期校验：仅针对 Cookie 会话（走到此处且 useAccessToken == false
-	// 时 username 必非 nil）；Authorization 访问令牌链路不读写时间戳、不做校验。
+	// Session lifetime check: only applies to cookie sessions (reaching this point with
+	// useAccessToken == false means username is necessarily non-nil); the Authorization
+	// access-token path neither reads nor writes timestamps and is not checked here.
 	if !useAccessToken {
 		now := time.Now().Unix()
 		if reason, expired := sessionLifetimeExpired(session, now); expired {
@@ -123,7 +124,8 @@ func authenticateUser(c *gin.Context, minRole int) {
 			c.Abort()
 			return
 		}
-		// 滑动续期节流：last_active 距今满 60 秒才回写一次，避免每请求重写 Cookie
+		// Sliding renewal throttle: write last_active back only once 60 seconds have passed,
+		// avoiding a cookie rewrite on every request.
 		if now-sessionValueInt64(session.Get(common.SessionKeyLastActive)) >= common.SessionTouchIntervalSeconds {
 			session.Set(common.SessionKeyLastActive, now)
 			if err := session.Save(); err != nil {
@@ -183,7 +185,7 @@ func authenticateUser(c *gin.Context, minRole int) {
 		c.Abort()
 		return
 	}
-	// 防止不同newapi版本冲突，导致数据不通用
+	// Prevent conflicts between different newapi versions that would make data incompatible.
 	c.Header("Auth-Version", "864b7076dbcd0a3c01b5520316720ebf")
 	c.Set("username", username)
 	c.Set("role", role)
@@ -191,15 +193,18 @@ func authenticateUser(c *gin.Context, minRole int) {
 	c.Set("group", session.Get("group"))
 	c.Set("user_group", session.Get("group"))
 	c.Set("use_access_token", useAccessToken)
-	// 分销商标记：authHelper 阈值放行后注入，供下游 handler/中间件按需精确判断。
-	// 注意：is_distributor 仅表示当前 role==RoleDistributorUser，不替代 DistributorAuth
-	// 的精确门控——admin/root 虽能走过 authHelper(c, RoleDistributorUser) 阈值（5≥1），
-	// 但 is_distributor=false；真正进入分销商视角须经过 DistributorAuth 二次精确校验。
+	// Distributor flag: injected after authHelper passes the threshold, so downstream
+	// handlers/middleware can make precise decisions on demand.
+	// Note: is_distributor only indicates that role == RoleDistributorUser; it does not
+	// replace the precise gating of DistributorAuth. Although admin/root also pass
+	// authHelper(c, RoleDistributorUser)'s threshold (5>=1), is_distributor is false for
+	// them; entering the distributor view requires the second precise check in DistributorAuth.
 	c.Set("is_distributor", role.(int) == common.RoleDistributorUser)
 }
 
-// sessionValueInt64 兼容会话值类型：cookie store 经 gob 往返恒为 int64，
-// 其余分支防御历史 int 值与未来更换 store（如 JSON 序列化产出 float64）的场景。
+// sessionValueInt64 normalizes session value types: the cookie store always round-trips
+// through gob as int64, while the remaining branches guard against legacy int values and
+// future store changes (e.g. JSON serialization producing float64).
 func sessionValueInt64(value interface{}) int64 {
 	switch v := value.(type) {
 	case int64:
@@ -215,9 +220,10 @@ func sessionValueInt64(value interface{}) int64 {
 	}
 }
 
-// sessionLifetimeExpired 判定会话是否已超时。四种情况判为过期：
-// 时间戳缺失（部署前签发的旧会话）、闲置满 30 分钟、登录满 12 小时、
-// last_active 晚于当前时间（时钟回拨/篡改）。返回 reason 便于日志归因。
+// sessionLifetimeExpired determines whether the session has timed out. Four cases are
+// treated as expired: a missing timestamp (sessions issued before deployment), 30 minutes
+// idle, 12 hours since login, or last_active later than the current time (clock rollback or
+// tampering). The reason is returned to make log attribution easier.
 func sessionLifetimeExpired(session sessions.Session, now int64) (string, bool) {
 	loginAt := sessionValueInt64(session.Get(common.SessionKeyLoginAt))
 	lastActive := sessionValueInt64(session.Get(common.SessionKeyLastActive))
@@ -236,7 +242,8 @@ func sessionLifetimeExpired(session sessions.Session, now int64) (string, bool) 
 	return "", false
 }
 
-// clearSessionCookie 清空会话值并让浏览器立即删除会话 Cookie（MaxAge: -1）。
+// clearSessionCookie clears the session values and makes the browser delete the session
+// cookie immediately (MaxAge: -1).
 func clearSessionCookie(session sessions.Session) error {
 	session.Clear()
 	session.Options(sessions.Options{
@@ -259,9 +266,11 @@ func authHelper(c *gin.Context, minRole int) {
 	if c.IsAborted() {
 		return
 	}
-	// 管理/root 写操作审计兜底：内聚在鉴权链路里，保证任何经过 AdminAuth/RootAuth
-	// 的写接口都会自动留痕（无需在路由上单独挂审计中间件，避免漏挂）。
-	// handler 内手动埋点者会设置 ContextKeyAuditLogged，finishAdminAudit 据此跳过。
+	// Fallback audit for admin/root write operations: folded into the auth chain so that every
+	// write endpoint passing through AdminAuth/RootAuth is audited automatically (no separate
+	// audit middleware on each route, which could be forgotten).
+	// Handlers that instrument the audit manually set ContextKeyAuditLogged, and
+	// finishAdminAudit skips those accordingly.
 	var auditWriter *auditResponseWriter
 	if minRole >= common.RoleAdminUser {
 		auditWriter = beginAdminAudit(c)
@@ -301,17 +310,19 @@ func RootAuth() func(c *gin.Context) {
 	}
 }
 
-// DistributorAuth 是分销商侧接口的服务端真防线（契约 §2.2）。
-// 语义：authHelper(c, RoleDistributorUser) 先做阈值校验（5≥1 保留基础用户能力、
-// 5<10 天然进不了 admin 面板），随后追加精确匹配 c.GetInt("role")==RoleDistributorUser——
-// admin(10)/root(100) 虽过阈值但被精确校验拦截，不进分销商视角（避免 ID 语义混乱）。
-// 所有 /api/distributor/* 与 /api/commission/* 的分销商侧接口（B4/B5/B6/A9/A10/A11/A12）
-// 必须挂此中间件，而非用 minRole=5 的纯阈值。
+// DistributorAuth is the server-side line of defense for distributor endpoints (contract §2.2).
+// Semantics: authHelper(c, RoleDistributorUser) first performs the threshold check (5>=1 keeps
+// basic user capabilities, 5<10 naturally cannot enter the admin panel), then an exact match on
+// c.GetInt("role")==RoleDistributorUser is added -- admin(10)/root(100) pass the threshold but
+// are blocked by the exact check, so they never enter the distributor view (avoiding ID semantic
+// confusion). All distributor-side endpoints under /api/distributor/* and /api/commission/*
+// (B4/B5/B6/A9/A10/A11/A12) must mount this middleware rather than a plain threshold with minRole=5.
 func DistributorAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		// 调 authenticateUser（不调 c.Next()）而非 authHelper，使精确匹配检查
-		// 能在 handler 执行前生效。若用 authHelper，其末尾的 c.Next() 会先跑完
-		// handler，导致 admin/root 的 403 无法写入（response 已落盘）——Rule 1 bug。
+		// Call authenticateUser (not c.Next()) instead of authHelper so the exact-match check
+		// takes effect before the handler runs. With authHelper, its trailing c.Next() would run
+		// the handler first, making it impossible to write the 403 for admin/root (the response
+		// would already be committed) -- Rule 1 bug.
 		authenticateUser(c, common.RoleDistributorUser)
 		if c.IsAborted() {
 			return
@@ -366,10 +377,10 @@ func TokenOrUserAuth() func(c *gin.Context) {
 	}
 }
 
-// TokenAuthReadOnly 宽松版本的令牌认证中间件，用于只读查询接口。
-// 只验证令牌 key 是否存在，不检查令牌状态、过期时间和额度。
-// 即使令牌已过期、已耗尽或已禁用，也允许访问。
-// 仍然检查用户是否被封禁。
+// TokenAuthReadOnly is a permissive variant of the token auth middleware for read-only query
+// endpoints. It only verifies that the token key exists and does not check token status,
+// expiration or quota. Even expired, exhausted or disabled tokens are allowed. It still checks
+// whether the user is banned.
 func TokenAuthReadOnly() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		key := c.Request.Header.Get("Authorization")
@@ -434,7 +445,7 @@ func TokenAuthReadOnly() func(c *gin.Context) {
 
 func TokenAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		// 先检测是否为ws
+		// First check whether this is a WebSocket request.
 		if c.Request.Header.Get("Sec-WebSocket-Protocol") != "" {
 			// Sec-WebSocket-Protocol: realtime, openai-insecure-api-key.sk-xxx, openai-beta.realtime-v1
 			// read sk from Sec-WebSocket-Protocol
@@ -449,14 +460,14 @@ func TokenAuth() func(c *gin.Context) {
 			}
 			c.Request.Header.Set("Authorization", "Bearer "+key)
 		}
-		// 检查path包含/v1/messages 或 /v1/models
+		// Check whether the path contains /v1/messages or /v1/models.
 		if strings.Contains(c.Request.URL.Path, "/v1/messages") || strings.Contains(c.Request.URL.Path, "/v1/models") {
 			anthropicKey := c.Request.Header.Get("x-api-key")
 			if anthropicKey != "" {
 				c.Request.Header.Set("Authorization", "Bearer "+anthropicKey)
 			}
 		}
-		// gemini api 从query中获取key
+		// The Gemini API takes the key from the query string.
 		if strings.HasPrefix(c.Request.URL.Path, "/v1beta/models") ||
 			strings.HasPrefix(c.Request.URL.Path, "/v1beta/openai/models") ||
 			strings.HasPrefix(c.Request.URL.Path, "/v1/models/") {
@@ -464,7 +475,7 @@ func TokenAuth() func(c *gin.Context) {
 			if skKey != "" {
 				c.Request.Header.Set("Authorization", "Bearer "+skKey)
 			}
-			// 从x-goog-api-key header中获取key
+			// Get the key from the x-goog-api-key header.
 			xGoogKey := c.Request.Header.Get("x-goog-api-key")
 			if xGoogKey != "" {
 				c.Request.Header.Set("Authorization", "Bearer "+xGoogKey)
@@ -513,11 +524,11 @@ func TokenAuth() func(c *gin.Context) {
 			logger.LogDebug(c, "Token has IP restrictions, checking client IP %s", clientIp)
 			ip := net.ParseIP(clientIp)
 			if ip == nil {
-				abortWithOpenAiMessage(c, http.StatusForbidden, "无法解析客户端 IP 地址")
+				abortWithOpenAiMessage(c, http.StatusForbidden, "Unable to parse the client IP address.")
 				return
 			}
 			if common.IsIpInCIDRList(ip, allowIps) == false {
-				abortWithOpenAiMessage(c, http.StatusForbidden, "您的 IP 不在令牌允许访问的列表中", types.ErrorCodeAccessDenied)
+				abortWithOpenAiMessage(c, http.StatusForbidden, "Your IP address is not in the list of IPs allowed for this token.", types.ErrorCodeAccessDenied)
 				return
 			}
 			logger.LogDebug(c, "Client IP %s passed the token IP restrictions check", clientIp)
@@ -543,13 +554,13 @@ func TokenAuth() func(c *gin.Context) {
 		if tokenGroup != "" {
 			// check common.UserUsableGroups[userGroup]
 			if _, ok := service.GetUserUsableGroups(userGroup)[tokenGroup]; !ok {
-				abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("无权访问 %s 分组", tokenGroup))
+				abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("No permission to access group %s.", tokenGroup))
 				return
 			}
 			// check group in common.GroupRatio
 			if !ratio_setting.ContainsGroupRatio(tokenGroup) {
 				if tokenGroup != "auto" {
-					abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("分组 %s 已被弃用", tokenGroup))
+					abortWithOpenAiMessage(c, http.StatusForbidden, fmt.Sprintf("Group %s has been deprecated.", tokenGroup))
 					return
 				}
 			}
@@ -590,8 +601,8 @@ func SetupContextForToken(c *gin.Context, token *model.Token, parts ...string) e
 			c.Set("specific_channel_id", parts[1])
 		} else {
 			c.Header("specific_channel_version", "701e3ae1dc3f7975556d354e0675168d004891c8")
-			abortWithOpenAiMessage(c, http.StatusForbidden, "普通用户不支持指定渠道")
-			return fmt.Errorf("普通用户不支持指定渠道")
+			abortWithOpenAiMessage(c, http.StatusForbidden, "Regular users cannot specify a channel.")
+			return fmt.Errorf("regular users cannot specify a channel")
 		}
 	}
 	return nil

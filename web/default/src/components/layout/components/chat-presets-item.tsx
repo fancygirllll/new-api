@@ -139,9 +139,9 @@ export function ChatPresetsItem({ item }: { item: NavChatPresets }) {
   const { chatPresets, serverAddress } = useChatPresets()
   const { state, isMobile, setOpenMobile } = useSidebar()
   const href = useLocation({ select: (location) => location.href })
-  // 预取当前账号可用的 API Key（React Query 缓存 5 分钟）：
-  // 点击时同步使用，既避免 await 导致 window.open 被弹窗拦截，
-  // 也避免每次点击都请求 POST /api/token/:id/key 而耗尽关键操作限流配额。
+  // Prefetch the API key available to the current account (cached by React Query for 5 minutes):
+  // used synchronously on click, avoiding an await that would let the popup blocker intercept window.open,
+  // and avoiding a POST /api/token/:id/key on every click that would exhaust the critical-operation rate limit.
   const { data: activeKey } = useActiveChatKey(true)
 
   const visiblePresets = useMemo(
@@ -172,7 +172,7 @@ export function ChatPresetsItem({ item }: { item: NavChatPresets }) {
 
       if (typeof window === 'undefined') return
 
-      // 同步调用，仍在用户手势内，不会被弹窗拦截
+      // Synchronous call, still within the user gesture, so it will not be blocked by the popup blocker
       window.open(url, '_blank', 'noopener')
       setOpenMobile(false)
     },

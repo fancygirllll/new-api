@@ -66,7 +66,7 @@ func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data 
 
 	switch notifyType {
 	case dto.NotifyTypeEmail:
-		// 优先使用设置中的通知邮箱，如果为空则使用用户的默认邮箱
+		// Prefer the notification email from settings; fall back to the user's default email if empty
 		emailToUse := userSetting.NotificationEmail
 		if emailToUse == "" {
 			emailToUse = userEmail
@@ -83,7 +83,7 @@ func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data 
 			return nil
 		}
 
-		// 获取 webhook secret
+		// Retrieve the webhook secret
 		webhookSecret := userSetting.WebhookSecret
 		return SendWebhookNotify(webhookURLStr, webhookSecret, data)
 	case dto.NotifyTypeBark:
@@ -108,7 +108,7 @@ func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data 
 func sendEmailNotify(userEmail string, data dto.Notify) error {
 	// make email content
 	content := data.Content
-	// 处理占位符
+	// Process placeholders
 	for _, value := range data.Values {
 		content = strings.Replace(content, dto.ContentValueParam, fmt.Sprintf("%v", value), 1)
 	}
@@ -116,23 +116,23 @@ func sendEmailNotify(userEmail string, data dto.Notify) error {
 }
 
 func sendBarkNotify(barkURL string, data dto.Notify) error {
-	// 处理占位符
+	// Process placeholders
 	content := data.Content
 	for _, value := range data.Values {
 		content = strings.Replace(content, dto.ContentValueParam, fmt.Sprintf("%v", value), 1)
 	}
 
-	// 替换模板变量
+	// Substitute template variables
 	finalURL := strings.ReplaceAll(barkURL, "{{title}}", url.QueryEscape(data.Title))
 	finalURL = strings.ReplaceAll(finalURL, "{{content}}", url.QueryEscape(content))
 
-	// 发送GET请求到Bark
+	// Send a GET request to Bark
 	var req *http.Request
 	var resp *http.Response
 	var err error
 
 	if system_setting.EnableWorker() {
-		// 使用worker发送请求
+		// Send the request through the worker
 		workerReq := &WorkerRequest{
 			URL:    finalURL,
 			Key:    system_setting.WorkerValidKey,
@@ -148,27 +148,27 @@ func sendBarkNotify(barkURL string, data dto.Notify) error {
 		}
 		defer resp.Body.Close()
 
-		// 检查响应状态
+		// Check the response status
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("bark request failed with status code: %d", resp.StatusCode)
 		}
 	} else {
-		// SSRF防护：验证Bark URL（非Worker模式）
+		// SSRF protection: validate the Bark URL (non-worker mode)
 		fetchSetting := system_setting.GetFetchSetting()
 		if err := common.ValidateURLWithFetchSetting(finalURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
 			return fmt.Errorf("request reject: %v", err)
 		}
 
-		// 直接发送请求
+		// Send the request directly
 		req, err = http.NewRequest(http.MethodGet, finalURL, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create bark request: %v", err)
 		}
 
-		// 设置User-Agent
+		// Set the User-Agent
 		req.Header.Set("User-Agent", "OneAPI-Bark-Notify/1.0")
 
-		// 发送请求
+		// Send the request
 		client := GetHttpClient()
 		resp, err = client.Do(req)
 		if err != nil {
@@ -176,7 +176,7 @@ func sendBarkNotify(barkURL string, data dto.Notify) error {
 		}
 		defer resp.Body.Close()
 
-		// 检查响应状态
+		// Check the response status
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("bark request failed with status code: %d", resp.StatusCode)
 		}
@@ -186,22 +186,22 @@ func sendBarkNotify(barkURL string, data dto.Notify) error {
 }
 
 func sendGotifyNotify(gotifyUrl string, gotifyToken string, priority int, data dto.Notify) error {
-	// 处理占位符
+	// Process placeholders
 	content := data.Content
 	for _, value := range data.Values {
 		content = strings.Replace(content, dto.ContentValueParam, fmt.Sprintf("%v", value), 1)
 	}
 
-	// 构建完整的 Gotify API URL
-	// 确保 URL 以 /message 结尾
+	// Build the full Gotify API URL
+	// Ensure the URL ends with /message
 	finalURL := strings.TrimSuffix(gotifyUrl, "/") + "/message?token=" + url.QueryEscape(gotifyToken)
 
-	// Gotify优先级范围0-10，如果超出范围则使用默认值5
+	// Gotify priority ranges from 0 to 10; use the default 5 when out of range
 	if priority < 0 || priority > 10 {
 		priority = 5
 	}
 
-	// 构建 JSON payload
+	// Build the JSON payload
 	type GotifyMessage struct {
 		Title    string `json:"title"`
 		Message  string `json:"message"`
@@ -214,7 +214,7 @@ func sendGotifyNotify(gotifyUrl string, gotifyToken string, priority int, data d
 		Priority: priority,
 	}
 
-	// 序列化为 JSON
+	// Serialize to JSON
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal gotify payload: %v", err)
@@ -224,7 +224,7 @@ func sendGotifyNotify(gotifyUrl string, gotifyToken string, priority int, data d
 	var resp *http.Response
 
 	if system_setting.EnableWorker() {
-		// 使用worker发送请求
+		// Send the request through the worker
 		workerReq := &WorkerRequest{
 			URL:    finalURL,
 			Key:    system_setting.WorkerValidKey,
@@ -242,28 +242,28 @@ func sendGotifyNotify(gotifyUrl string, gotifyToken string, priority int, data d
 		}
 		defer resp.Body.Close()
 
-		// 检查响应状态
+		// Check the response status
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("gotify request failed with status code: %d", resp.StatusCode)
 		}
 	} else {
-		// SSRF防护：验证Gotify URL（非Worker模式）
+		// SSRF protection: validate the Gotify URL (non-worker mode)
 		fetchSetting := system_setting.GetFetchSetting()
 		if err := common.ValidateURLWithFetchSetting(finalURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
 			return fmt.Errorf("request reject: %v", err)
 		}
 
-		// 直接发送请求
+		// Send the request directly
 		req, err = http.NewRequest(http.MethodPost, finalURL, bytes.NewBuffer(payloadBytes))
 		if err != nil {
 			return fmt.Errorf("failed to create gotify request: %v", err)
 		}
 
-		// 设置请求头
+		// Set request headers
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		req.Header.Set("User-Agent", "NewAPI-Gotify-Notify/1.0")
 
-		// 发送请求
+		// Send the request
 		client := GetHttpClient()
 		resp, err = client.Do(req)
 		if err != nil {
@@ -271,7 +271,7 @@ func sendGotifyNotify(gotifyUrl string, gotifyToken string, priority int, data d
 		}
 		defer resp.Body.Close()
 
-		// 检查响应状态
+		// Check the response status
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("gotify request failed with status code: %d", resp.StatusCode)
 		}
